@@ -1,26 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* SealedSkin design tokens (ported from the Tailwind v3 config in the design export). */
+@theme {
+  --color-ss-bg: #e8f0ed;
+  --color-ss-panel: #f6faf8;
+  --color-ss-surface: #fbfdfc;
+  --color-ss-ink: #243f39;
+  --color-ss-ink-soft: #5a716b;
+  --color-ss-ink-faint: #95a8a2;
+  --color-ss-hairline: #dbe7e2;
+  --color-ss-hairline-strong: #c4d6cf;
+  --color-ss-track: #d6e4df;
+  --color-ss-photo-bg: #e1ece7;
+  --color-ss-photo-text: #6a807a;
+  --color-ss-on-accent: #f6faf8;
+  --color-ss-accent: #7a9e54;
+  --color-ss-accent-tint: #eaf1e6;
+  --color-ss-accent-ink: #5c7b47;
+  --color-caution-text: #a86b3c;
+  --color-caution-bg: #f6ecdf;
+
+  --font-head: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark mode: same palette, darker/inverted. Toggled by adding `.dark` to <html>
+   (see the no-flash script in layout.tsx). Overriding the design tokens here
+   re-themes every `ss-*` utility at once. */
+:root.dark {
+  --color-ss-bg: #0e1613;
+  --color-ss-panel: #161f1b;
+  --color-ss-surface: #1c2723;
+  --color-ss-ink: #e4ece8;
+  --color-ss-ink-soft: #a3b5af;
+  --color-ss-ink-faint: #6f827c;
+  --color-ss-hairline: #2a3833;
+  --color-ss-hairline-strong: #3a4d45;
+  --color-ss-track: #2a3833;
+  --color-ss-photo-bg: #1f2b27;
+  --color-ss-photo-text: #8a9d97;
+  --color-ss-on-accent: #0e1613;
+  --color-ss-accent: #8fb468;
+  --color-ss-accent-tint: #21301a;
+  --color-ss-accent-ink: #a9c987;
+  --color-caution-text: #d7a368;
+  --color-caution-bg: #2e2417;
+
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body {
+  background-color: var(--color-ss-bg);
+  color: var(--color-ss-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-ss-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
