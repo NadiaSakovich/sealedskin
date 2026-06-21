@@ -169,6 +169,11 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
 - **Turbopack stale cache:** if styles look wrong (e.g. tokens not applying / old classes
   served), the `.next` cache can be stale — `pkill -f "next dev"; rm -rf .next; npm run dev`.
   This bit us after running `next build` then `next dev`.
+- **Next image-optimizer stale variant:** after overwriting a file in `public/` (e.g. regenerating
+  a quiz image), the dev server keeps serving the OLD optimized image. It caches per `Accept`
+  header, so the browser's webp/avif variant survives a plain dev restart AND even
+  `rm -rf .next/cache/images`. Fix that actually works: full `rm -rf .next` + restart. (Production
+  builds optimize fresh, so this is dev-only. Verify with `curl -H "Accept: image/webp" <_next/image url>`.)
 - Don't run `next build` while `next dev` is running (shared `.next` → conflicts).
 - Buttons go through `ui/Button.tsx` (`variant="primary" | "ghost"`); the primary CTA has the
   `bg-ss-accent` class (handy selector for E2E driving).
@@ -197,6 +202,22 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 - Playwright in `/tmp/ss-pw/` can get corrupted (missing `package.json`); if `import` fails, just
   re-run `npm i playwright` there. Soft (Link) navigations need `waitForURL`, not bare `p.url()`.
 - After a change, run `npx tsc --noEmit` and a screenshot drive; check `console --errors`.
+
+## Repository & git
+
+- Hosted at **https://github.com/NadiaSakovich/sealedskin** (public). Owner username is
+  **NadiaSakovich** (renamed from `NadzeyaSakovich`). The account **ID is stable** (`5446710`), so
+  `gh` auth and the ID-based noreply email keep working across the rename; the `origin` URL and
+  commit identity were repointed to the new username (don't rely on GitHub's old-username redirect).
+- Auth is the **`gh` CLI over HTTPS** (installed via Homebrew; not a repo dependency). Push/pull use
+  gh's git credential helper — no SSH keys. `gh auth login` must be run in a real terminal (the
+  interactive prompts don't work through the in-session `!` runner).
+- Commit identity is set **repo-locally** to the GitHub username + the account's `noreply` email
+  (`5446710+NadiaSakovich@users.noreply.github.com`) so the personal email stays out of public
+  history. The global git identity is intentionally left empty/untouched.
+- `.gitignore` decisions: `.env*` stays ignored **except `!.env.example`** (committed template, no
+  secrets); `design-incoming/` and `.claude/settings.local.json` are ignored. `.env.local` (the
+  real Gemini + Firebase keys) is never committed — confirmed absent from the remote.
 
 ## Work done this session
 
@@ -247,6 +268,13 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 14. **Replaced the quiz image placeholders with real imagery:** generated a cohesive 14-image set
     (2 intros + 12 concerns) with `gemini-3.1-flash-image`, downscaled into `public/quiz/`; taught
     `PhotoSlot` to render `next/image` from a `src` (see "Quiz imagery").
+15. **Polished imagery + published to GitHub.** Regenerated the intro hero (`intro-skin.jpg`) to a
+    brighter, livelier shot (the first one read as dull); hit and documented the image-optimizer
+    stale-variant gotcha. Then published the repo: installed `gh`, authed over HTTPS, tuned
+    `.gitignore` (commit `.env.example`; ignore `design-incoming/` + local Claude settings), set a
+    privacy-friendly noreply commit identity, and pushed `main` to a new **public** repo. Later
+    handled the owner's GitHub **username change** (`NadzeyaSakovich` → `NadiaSakovich`) by
+    repointing the `origin` URL + commit identity (see "Repository & git").
 
 ## Likely next steps
 
@@ -257,3 +285,5 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.
 - Optionally delete `design-incoming/` once no longer needed as reference.
 - Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.5-flash` path.
+- Add a **`README.md`** (setup/run, required env vars) now that the repo is public; consider a
+  deploy target (Vercel) and basic CI (`tsc --noEmit` + `next build`).
