@@ -35,7 +35,7 @@ function ConcernCard({ concern, selected, onToggle }: { concern: Concern; select
       }`}
     >
       <div className="relative">
-        <PhotoSlot label={concern.label} src={`/quiz/concern-${concern.id}.jpg`} ratio="16 / 10" radius={0} />
+        <PhotoSlot label={concern.label} src={`/quiz/concern-${concern.id}.jpg`} ratio="16 / 10" radius={0} bordered={false} />
         <span className="absolute top-[9px] right-[9px]">
           <Check on={selected} white />
         </span>
@@ -91,7 +91,7 @@ export function PriorityList({
             }`}
           >
             <div className="basis-[56px] shrink-0 w-14 h-14 overflow-hidden rounded-[10px]">
-              <PhotoSlot label={c.label} src={`/quiz/concern-${c.id}.jpg`} ratio="1 / 1" radius={10} />
+              <PhotoSlot label={c.label} src={`/quiz/concern-${c.id}.jpg`} ratio="1 / 1" radius={10} bordered={false} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[15.5px] font-semibold tracking-[-0.01em]">{c.label}</div>

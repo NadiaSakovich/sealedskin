@@ -6,14 +6,17 @@ interface Props {
   radius?: number;
   /** When set, renders the real image (object-cover) instead of the striped placeholder. */
   src?: string;
+  /** Draw the slot's own hairline border. Off when nested inside a card that already has one. */
+  bordered?: boolean;
 }
 
 /** Skin imagery slot. Renders `src` when provided, else a striped placeholder. */
-export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src }: Props) {
+export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src, bordered = true }: Props) {
+  const borderClass = bordered ? "border border-ss-hairline " : "";
   if (src) {
     return (
       <div
-        className="relative w-full overflow-hidden border border-ss-hairline bg-ss-photo-bg"
+        className={`relative w-full overflow-hidden ${borderClass}bg-ss-photo-bg`}
         style={{ aspectRatio: ratio, borderRadius: radius }}
       >
         <Image
@@ -29,7 +32,7 @@ export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src }: Props) {
 
   return (
     <div
-      className="relative w-full flex items-center justify-center overflow-hidden border border-ss-hairline bg-ss-photo-bg [background-image:repeating-linear-gradient(135deg,rgba(55,100,88,0.13)_0_1px,transparent_1px_9px)]"
+      className={`relative w-full flex items-center justify-center overflow-hidden ${borderClass}bg-ss-photo-bg [background-image:repeating-linear-gradient(135deg,rgba(55,100,88,0.13)_0_1px,transparent_1px_9px)]`}
       style={{ aspectRatio: ratio, borderRadius: radius }}
     >
       <span className="font-mono text-[10.5px] tracking-[0.04em] lowercase text-ss-photo-text bg-ss-surface px-[7px] py-[3px] rounded-full text-center max-w-[84%] leading-[1.25]">
