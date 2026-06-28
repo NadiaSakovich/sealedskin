@@ -1,6 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+/** Re-read whenever the <html> class attribute changes (toggle or inline script). */
+function subscribeToTheme(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => observer.disconnect();
+}
+const isDark = () => document.documentElement.classList.contains("dark");
+// The inline no-flash script runs before hydration, so the server can't know the
+// real theme — default to light on the server; the client re-reads after mount
+// (useSyncExternalStore tolerates this client/server difference without warning).
+const isDarkServer = () => false;
 
 /**
  * Light/dark theme switch shown in the header next to the account control.
@@ -12,22 +24,18 @@ import { useEffect, useState } from "react";
  * `full` stretches the control into a labeled row for the mobile menu layout.
  */
 export function ThemeToggle({ full = false }: { full?: boolean }) {
-  const [dark, setDark] = useState(false);
-
-  // Read the theme the inline script already applied (avoids a hydration flip).
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
+  // Mirror the DOM's theme class straight into render — no in-effect state sync.
+  const dark = useSyncExternalStore(subscribeToTheme, isDark, isDarkServer);
 
   function toggle() {
-    const next = !document.documentElement.classList.contains("dark");
+    const next = !isDark();
+    // Flipping the class triggers the observer above, which re-renders this switch.
     document.documentElement.classList.toggle("dark", next);
     try {
       localStorage.setItem("ss-theme", next ? "dark" : "light");
     } catch {
       /* ignore storage being unavailable */
     }
-    setDark(next);
   }
 
   const Switch = (

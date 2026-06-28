@@ -19,13 +19,17 @@ receives an AM/PM routine plus example product picks.
 - `src/app/page.tsx` — renders `<SkinQuiz />` (the whole experience).
 - `src/app/{about,how-it-works}/page.tsx` — static content routes (server components) shown from
   the header nav. They use `ContentShell` (header + reading column, no quiz progress rail).
+- `src/app/profile/page.tsx` — the **user profile** route (server component → renders the client
+  `components/profile/ProfileView`, also in `ContentShell`). Shows the signed-in user's Google
+  identity (photo/name/email) and their **saved routines** list; reached from the header account
+  dropdown ("Your profile") — see "User profile" below.
 - `src/app/layout.tsx` — root layout + metadata (no font loaders; fonts come from `globals.css`).
   Also runs an inline **no-flash theme script** in `<head>` that adds `.dark` to `<html>` before
   first paint; `<html>` carries `suppressHydrationWarning` (see Dark mode below).
 - `src/app/globals.css` — Tailwind v4 entry. Design tokens live in an `@theme` block (see Tokens below).
 - `src/lib/firebase/**` — `client.ts` (Google sign-in), `useAuth.ts`, `admin.ts`. Auth surfaces in
   the header via `AccountControl`; results can be saved (`SaveRoutine` → `POST /api/users`,
-  guarded by `firestore.rules`).
+  guarded by `firestore.rules`). `GET /api/users` reads them back for the profile page.
 - `src/components/SkinQuiz.tsx` — **the core**: a `"use client"` step machine keyed off an
   integer `step`. Constants `S2_*`, `S3_*`, `R_*` define screen order; add a screen by
   inserting a constant + a render branch + wiring `go()`. All child components are client
@@ -36,6 +40,10 @@ receives an AM/PM routine plus example product picks.
 - `src/lib/analysis.ts` — pure `analyzeSkin()`; scores skin type from question `signal`s.
   Depends on question ids `after_cleanse`, `midday_shine`, `pores`, `tightness`,
   `end_of_day`, `sensitivity` — don't rename without updating this.
+- `src/lib/editSession.ts` — a `sessionStorage` handoff (`stashEditQuiz`/`takeEditQuiz`) used to
+  reopen a **saved** routine inside the quiz for review/edit: the profile stashes the saved
+  `{ id, submission, result }` and navigates to `/?edit=1`; `SkinQuiz` reads it on mount (see
+  "Saved-routine review hub" under User profile).
 - `src/types.ts` — shared domain types for the quiz/logic (the design's types).
 
 ## AI routine engine (wired into the UI)
@@ -112,7 +120,8 @@ user can compare; to be removed once one model is chosen.
 3. **Stage 3 — Preferences:** commitment level (minimal/balanced/thorough) → region →
    pregnancy/nursing.
 4. **Finale** ("Your skin profile is ready"): review card with **edit** links on Skin type,
-   Concerns, and Routine sections → "Build my routine".
+   Concerns, and Routine sections → "Build my routine". When opened from a **saved** routine the
+   finale becomes a **review hub** instead (see "Saved-routine review hub").
 5. **Results:** Needs summary → Ingredients → AM/PM Routine → Shop.
 
 Note: the pregnancy question lives in `src/data/questions.ts` (id `pregnancy`) but is rendered
@@ -146,13 +155,103 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
   `/how-it-works` and `/about` with active-state styling (via `usePathname()`). (The old
   "Ingredients" nav item was removed.) Hosts `ThemeToggle` + `AccountControl`.
 - The quiz uses `Shell` (header + progress rail); content routes use `ContentShell` (header only).
+- `AccountControl`'s signed-in dropdown has a **"Your profile"** `next/link` (→ `/profile`) above
+  "Sign out".
+
+## User profile
+
+- **Route:** `/profile` (`src/app/profile/page.tsx`) → `components/profile/ProfileView.tsx`
+  (`"use client"`), inside `ContentShell`. Auth-gated by `useAuth`: signed-out shows a Google
+  sign-in prompt; signed-in fetches `GET /api/users` and renders the profile + saved routines.
+- **API (`route.ts`, all token-verified via `authedUid`):** `GET` returns `{ profile, quizzes }` —
+  the user's saved quizzes from `users/{uid}/quizzes`, newest first, with the Firestore `createdAt`
+  Timestamp converted to **epoch millis** (serializable). `POST` creates a new saved routine; `PUT`
+  (body carries `id`) **updates one in place** (used when editing a saved routine); `DELETE` (body
+  carries `id`) removes one. All go through the Admin SDK server-side, so `firestore.rules` stays
+  **deny-all** (no client Firestore access).
+- **List:** routines render as cards labeled **"Routine N · {skin type}"** (N from list position so
+  "Routine 1" is the oldest; newest gets the highest number) with top concerns + save date, plus a
+  **delete** action (`handleDelete` → `DELETE /api/users`). Clicking a card **opens it back in the
+  quiz** for review/edit (`handleOpen` → `stashEditQuiz` + `router.push("/?edit=1")`); there is no
+  longer a separate read-only detail component (the old `SavedRoutineDetail.tsx` was removed; the
+  `SavedResult` type now lives in `components/profile/types.ts`).
+- **Richer saved snapshot:** `QuizResultSnapshot` (`lib/domain/types.ts`) also carries optional
+  `source`, `picked` (ingredients), `productsByType`, and `grounding`; `SkinQuiz.startBuild`'s save
+  payload passes them, so a reopened routine renders as fully as the live results (and shows the
+  **exact products as saved**, not re-fetched). The new fields are optional/guarded, so older saves
+  (routine-only) still render.
+
+### Saved-routine review hub
+
+Opening a saved routine reuses the quiz instead of a separate viewer. `ProfileView` stashes the
+`{ id, submission, result }` (`stashEditQuiz`) and navigates to `/?edit=1`; `SkinQuiz`'s mount
+effect calls `takeEditQuiz()`, restores the answers + result, sets `editingId` (so a later save
+PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on the **finale**.
+
+- **`FinaleScreen` gains an optional `review` prop** (`ReviewControls`). With it, the finale stops
+  being a one-shot "Build my routine" and becomes a hub with two stages:
+  - `stage: "landing"` — three buttons: **Review routine** (→ results screens, no rebuild),
+    **Review & edit quiz** (walks the quiz from step 1), **Back to profile**.
+  - `stage: "editing"` (set once the user enters quiz editing via any edit link) — the CTA is
+    **Rebuild my routine** if answers changed, else **Show my routine** (shows the saved result, no
+    AI rebuild).
+- **Change detection:** `submissionChanged(editOriginal, current)` in `SkinQuiz` (order-independent
+  for the concern arrays) drives both the rebuild-vs-show CTA and whether the Shop page offers to
+  save. A pure review (nothing changed) shows **no** "Save your changes" section; a fresh quiz always
+  shows "Save your routine".
+- **`Shell` gains `onBackToProfile`** — while editing a saved routine (`editingId` set), every quiz
+  and results screen shows a persistent "← Back to profile" link in the header band.
+- **Profile photo** uses a plain `<img>` (Google `lh3.googleusercontent.com` avatar, with an
+  `eslint-disable @next/next/no-img-element`) to avoid adding `next.config` `remotePatterns`.
+- **Gotcha — `react-hooks/set-state-in-effect`:** the ESLint 9 config (and `next build`) flags
+  synchronous `setState` reached from an effect, and it traces *through* called functions, so even a
+  fetch helper that defers all `setState` until after its first `await` trips it. `ProfileView`'s
+  fetch-on-auth-change effect carries a targeted `// eslint-disable-next-line` for this (a legit
+  external-sync effect). Signed-out state is handled by a render guard, not by clearing state in the
+  effect.
+
+## Shop product sourcing (real-time, with offline fallback)
+
+Product picks on the Shop screen must be **real-time** — taken from the AI's grounded research, not
+a hardcoded list. The flow (`components/results/ShopView.tsx`):
+
+- **Live AI routine** → shows **ONLY** the grounded picks the model just returned
+  (`RoutineResult.productsByType`, keyed by routine-step `type`). The static catalog is **never**
+  used to top these up — an earlier "always show 3" fix that padded from the catalog was the bug that
+  leaked off-region brands (e.g. The Ordinary/CeraVe into a K-beauty routine) and was removed.
+- **Offline fallback** (`source: "local"` — no `GEMINI_API_KEY`, network error, or failed call, so
+  `productsByType` is absent) → and **only then** → the static catalog `src/data/products.ts`
+  (`productsForStep` → `slotForStep` + `selectProducts`, region-aware). This is the one place the
+  catalog still feeds the UI; it's kept purely as a reliability backstop.
+- **Tolerant step matching:** the model's `stepType` doesn't always string-match the routine step's
+  `type` ("Gentle Cleanser"/"Face Wash" vs "Cleanser"), which used to silently drop a step's picks.
+  `ShopView.resolve` now matches by normalised type first, then by a **coarse step family** derived
+  from `slotForStep` (all cleanser slots → "cleanser", all moisturiser slots + nightcream →
+  "moisturizer", SPF → "spf"; actives like vitc/niacinamide stay their own family so a Vitamin C step
+  never grabs niacinamide products). `slotForStep` was also hardened to recognise label variants
+  ("cleansing"/"wash"/"cleansing oil", "sun cream"/"spf"/standalone "sun").
+- **No silent omission:** if a step truly has no picks, `ShopStep` still renders the step header with
+  a plain note rather than disappearing, so the Shop page always mirrors the routine.
+- The intro copy says "**A few** picks at different budgets per step" (not "Three") since live counts
+  depend on what grounding returns.
+- `products.ts` catalog depth: every **common** routine slot has ≥3 options per major region
+  (asia/us/eu) so the offline fallback can honour a region preference without borrowing off-region
+  brands; niche actives (azelaic/benzoyl/squalane/cica) may still mix, matching the "leaning toward
+  {region}" copy. The grounded prompt (`agent.ts`) also asks for exactly three picks per step and to
+  strongly favour the user's stated region.
+
+**Saved routines are the exception:** a reopened saved routine shows the products **as saved**
+(`productsByType` from its snapshot), not re-fetched — so an old save keeps its original (possibly
+pre-fix) picks until rebuilt.
 
 ## Quiz imagery
 
 - `ui/PhotoSlot.tsx` renders a real image (`next/image`, `fill` + `object-cover`) when given a
   `src`, else the striped placeholder. Where it's used: the two quiz intros (`SkinQuiz.tsx`) and
   the concern tiles (`ConcernGrid.tsx`, both the grid `16/10` and priority `1/1`).
-- Images live in `public/quiz/` — `intro-skin.jpg`, `intro-concerns.jpg`, and
+- Images live in `public/quiz/` — `intro-skin-1.jpg`/`-2`/`-3` (the Stage-1 hero **rotates**: one
+  of the three is picked at random per page load — `INTRO_SKIN_IMAGES` in `SkinQuiz`, chosen in an
+  effect so SSR always renders index 0 and there's no hydration mismatch), `intro-concerns.jpg`, and
   `concern-<id>.jpg` (id matches `SKIN_CONCERNS[].id`, so the path is derived, not stored). All
   **Gemini-generated** (`gemini-3.1-flash-image`, 1:1), one cohesive sage-green editorial set,
   downscaled to 512px JPEG (~35–55KB each). `concerns.ts`'s `photo` field is now unused (alt text
@@ -275,13 +374,43 @@ Google Chrome** from a throwaway dir to keep project deps clean:
     privacy-friendly noreply commit identity, and pushed `main` to a new **public** repo. Later
     handled the owner's GitHub **username change** (`NadzeyaSakovich` → `NadiaSakovich`) by
     repointing the `origin` URL + commit identity (see "Repository & git").
+16. **Added the user profile page** (see "User profile"): new `/profile` route showing the signed-in
+    user's Google identity + their **saved routines** list (cards labeled "Routine N · {skin type}");
+    clicking one opens a read-only `SavedRoutineDetail`. Added `GET /api/users` (token-verified,
+    Admin-SDK read, `createdAt` → millis) so `firestore.rules` stays deny-all; enriched
+    `QuizResultSnapshot` (+`source`/`picked`/`productsByType`/`grounding`) so saved routines render as
+    fully as live ones; added a **"Your profile"** link to the `AccountControl` dropdown. Verified:
+    `tsc`/`eslint` clean, signed-out `/profile` renders with zero console errors (Playwright). The
+    **signed-in path was not E2E-tested** (needs a real Google popup + Firebase keys).
+17. **Reworked the saved-routine flow into a review hub** (see "Saved-routine review hub"): opening a
+    saved routine now reuses the quiz via `editSession.ts` + `/?edit=1` and lands on the finale as a
+    hub (Review routine / Review & edit quiz / Back to profile); editing shows **Rebuild** (if answers
+    changed) or **Show** (if not). Added `Shell.onBackToProfile` (persistent "← Back to profile" while
+    editing), `submissionChanged` change-detection, in-place save via `PUT /api/users`, and a
+    **delete** action via `DELETE /api/users`. **Removed** the old read-only `SavedRoutineDetail.tsx`
+    (its `SavedResult` type moved to `components/profile/types.ts`).
+18. **Made Shop products real-time** (see "Shop product sourcing"): live routines render only the AI's
+    grounded picks — removed the static-catalog top-up that was leaking off-region brands. The catalog
+    is now the **offline-only** fallback. Added tolerant `stepType`→step matching (so a "Cleanser"
+    step isn't dropped when the model labels it "Face Wash" etc.), hardened `slotForStep`, kept empty
+    steps visible with a note, and changed the copy to "a few picks". Enriched `products.ts` so each
+    common slot has ≥3 options per region (offline fallback honours region preference); grounded prompt
+    now asks for 3 picks/step and to favour the stated region.
+19. **Stage-1 intro hero now rotates** between `intro-skin-1/2/3.jpg` (random per load, SSR-safe);
+    the single `intro-skin.jpg` was removed.
 
 ## Likely next steps
 
 - **Pick one model and remove the temporary `ModelPicker`** (the user plans to compare
   `3.1-flash-lite` vs `3.5-flash`, then keep one and delete the switch).
 - Add an explicit **account-creation prompt** after results (the pieces exist — auth + `SaveRoutine`
-  — but there's no dedicated "save & track vs. continue without an account" moment yet).
+  + the `/profile` page — but there's no dedicated "save & track vs. continue without an account"
+  moment yet).
+- **E2E-test the signed-in flow** end-to-end (save a routine; open it → review hub → review / edit /
+  rebuild / show / update-in-place / delete / back-to-profile) — only the signed-out state has been
+  verified so far; the review-hub + save-gating logic is unit/type-checked but not clicked through.
+- Consider giving saved routines **persisted, user-editable names** (currently the "Routine N" label
+  is derived from list position, not stored). (A **delete** action now exists.)
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.
 - Optionally delete `design-incoming/` once no longer needed as reference.
 - Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.5-flash` path.

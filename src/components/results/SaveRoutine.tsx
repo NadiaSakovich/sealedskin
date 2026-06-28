@@ -12,11 +12,15 @@ type Status = "idle" | "saving" | "saved" | "error";
  * End-of-results prompt to save the routine. Signs in with Google in the browser,
  * then POSTs the quiz to /api/users with the resulting ID token. The server
  * verifies the token and persists under the user's account.
+ *
+ * When `editId` is set (the user is editing a saved routine), it PUTs to update
+ * that routine in place instead of creating a new one.
  */
-export function SaveRoutine({ payload }: { payload: SaveQuizRequest }) {
+export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; editId?: string }) {
   const { user } = useAuth();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const editing = !!editId;
 
   async function handleSave() {
     setStatus("saving");
@@ -25,12 +29,12 @@ export function SaveRoutine({ payload }: { payload: SaveQuizRequest }) {
       // Reuse the header session if already signed in; otherwise open Google.
       const idToken = (await getCurrentIdToken()) ?? (await signInWithGoogle()).idToken;
       const res = await fetch("/api/users", {
-        method: "POST",
+        method: editing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(editing ? { ...payload, id: editId } : payload),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -52,10 +56,12 @@ export function SaveRoutine({ payload }: { payload: SaveQuizRequest }) {
     return (
       <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-accent-tint px-[18px] py-[15px] text-center">
         <p className="font-head font-semibold text-[16px] text-ss-accent-ink m-0">
-          Saved ✓
+          {editing ? "Updated ✓" : "Saved ✓"}
         </p>
         <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mt-1 [text-wrap:pretty]">
-          Your routine is saved to your account. Sign in again any time to pick it back up.
+          {editing
+            ? "Your changes are saved to this routine. Find it any time on your profile."
+            : "Your routine is saved to your account. Sign in again any time to pick it back up."}
         </p>
       </div>
     );
@@ -64,19 +70,25 @@ export function SaveRoutine({ payload }: { payload: SaveQuizRequest }) {
   return (
     <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-surface px-[18px] py-[16px]">
       <p className="font-head font-semibold text-[16px] text-ss-ink m-0 mb-1">
-        Save your routine
+        {editing ? "Save your changes" : "Save your routine"}
       </p>
       <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[14px] [text-wrap:pretty]">
-        {user
-          ? "Save this routine to your account and come back to it later."
-          : "Create a free account to keep this routine and come back to it later."}
+        {editing
+          ? "Update this routine in your profile with the changes you just made."
+          : user
+            ? "Save this routine to your account and come back to it later."
+            : "Create a free account to keep this routine and come back to it later."}
       </p>
       <Button onClick={handleSave} disabled={status === "saving"}>
         {status === "saving"
-          ? "Saving…"
-          : user
-            ? "Save my routine"
-            : "Sign in with Google & save"}
+          ? editing
+            ? "Updating…"
+            : "Saving…"
+          : editing
+            ? "Update my routine"
+            : user
+              ? "Save my routine"
+              : "Sign in with Google & save"}
       </Button>
       {status === "error" && error && (
         <p className="text-[12.5px] leading-[1.45] text-caution-text m-0 mt-3 [text-wrap:pretty]">

@@ -20,6 +20,23 @@ function SummarySection({ label, onEdit, children, first }: { label: string; onE
   );
 }
 
+/**
+ * When the user opened a *saved* routine, the finale becomes a review hub instead
+ * of a one-shot "Build my routine". `stage: "landing"` shows the three review
+ * buttons; once they choose "edit quiz" it becomes `"editing"` and the CTA turns
+ * into rebuild (if answers changed) or show (if not).
+ */
+export interface ReviewControls {
+  stage: "landing" | "editing";
+  /** Whether the quiz answers differ from the saved version. */
+  changed: boolean;
+  onReviewRoutine: () => void;
+  onEditQuiz: () => void;
+  onBackToProfile: () => void;
+  onRebuild: () => void;
+  onShow: () => void;
+}
+
 interface Props {
   QS: Question[];
   answers: Record<string, string>;
@@ -31,11 +48,13 @@ interface Props {
   onEditConcerns: () => void;
   onEditRoutine: () => void;
   onBack: () => void;
+  /** Present only when reviewing/editing a saved routine. */
+  review?: ReviewControls;
 }
 
 export function FinaleScreen({
   QS, answers, chosenConcerns, topConcerns, level,
-  onBuild, onEditSkin, onEditConcerns, onEditRoutine, onBack,
+  onBuild, onEditSkin, onEditConcerns, onEditRoutine, onBack, review,
 }: Props) {
   const [phase, setPhase] = useState<"idle" | "building">("idle");
   const timer = useRef<number | undefined>(undefined);
@@ -64,7 +83,9 @@ export function FinaleScreen({
           Your skin profile is ready
         </h1>
         <p className="text-[16px] leading-[1.55] text-ss-ink-soft max-w-[410px] mx-auto mb-0 [text-wrap:pretty]">
-          Here&rsquo;s everything you told us. Review it, tweak anything, then build your routine.
+          {review
+            ? "Here’s the profile behind this saved routine. Review the routine, edit your answers, or head back to your profile."
+            : "Here’s everything you told us. Review it, tweak anything, then build your routine."}
         </p>
       </div>
 
@@ -100,18 +121,58 @@ export function FinaleScreen({
         </SummarySection>
       </div>
 
-      <div className="mt-6 text-center">
-        <Button onClick={build} disabled={phase === "building"} className={`!px-7 !py-[15px] !text-[16.5px] ${phase === "building" ? "!opacity-70 cursor-wait" : ""}`}>
-          {phase === "building" ? "Building your routine…" : "Build my routine"}
-          {phase !== "building" && <Arrow />}
-        </Button>
-      </div>
+      {!review && (
+        <>
+          <div className="mt-6 text-center">
+            <Button onClick={build} disabled={phase === "building"} className={`!px-7 !py-[15px] !text-[16.5px] ${phase === "building" ? "!opacity-70 cursor-wait" : ""}`}>
+              {phase === "building" ? "Building your routine…" : "Build my routine"}
+              {phase !== "building" && <Arrow />}
+            </Button>
+          </div>
+          <div className="flex justify-center mt-[18px]">
+            <Button variant="ghost" onClick={onBack}>
+              <Arrow back /> Back
+            </Button>
+          </div>
+        </>
+      )}
 
-      <div className="flex justify-center mt-[18px]">
-        <Button variant="ghost" onClick={onBack}>
-          <Arrow back /> Back
-        </Button>
-      </div>
+      {review && review.stage === "landing" && (
+        <div className="mt-6 flex flex-col items-center gap-[10px]">
+          <Button onClick={review.onReviewRoutine} className="!px-7 !py-[15px] !text-[16.5px]">
+            Review routine <Arrow />
+          </Button>
+          <Button variant="ghost" onClick={review.onEditQuiz}>
+            <Arrow back /> Review &amp; edit quiz
+          </Button>
+          <Button variant="ghost" onClick={review.onBackToProfile}>
+            Back to profile
+          </Button>
+        </div>
+      )}
+
+      {review && review.stage === "editing" && (
+        <>
+          <div className="mt-6 text-center">
+            <Button
+              onClick={review.changed ? review.onRebuild : review.onShow}
+              className="!px-7 !py-[15px] !text-[16.5px]"
+            >
+              {review.changed ? "Rebuild my routine" : "Show my routine"} <Arrow />
+            </Button>
+            {review.changed && (
+              <p className="text-[12.5px] text-ss-ink-faint mt-[10px] [text-wrap:pretty]">
+                You changed your answers — rebuild to refresh the routine.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-center mt-[18px]">
+            <Button variant="ghost" onClick={onBack}>
+              <Arrow back /> Back
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

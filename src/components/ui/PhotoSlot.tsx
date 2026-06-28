@@ -8,10 +8,12 @@ interface Props {
   src?: string;
   /** Draw the slot's own hairline border. Off when nested inside a card that already has one. */
   bordered?: boolean;
+  /** Extra classes for the <Image> (e.g. a scale/origin to zoom in on the subject). */
+  imageClassName?: string;
 }
 
 /** Skin imagery slot. Renders `src` when provided, else a striped placeholder. */
-export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src, bordered = true }: Props) {
+export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src, bordered = true, imageClassName = "" }: Props) {
   const borderClass = bordered ? "border border-ss-hairline " : "";
   if (src) {
     return (
@@ -24,7 +26,7 @@ export function PhotoSlot({ label, ratio = "1 / 1", radius = 14, src, bordered =
           alt={label}
           fill
           sizes="(max-width: 700px) 50vw, 320px"
-          className="object-cover"
+          className={`object-cover ${imageClassName}`}
         />
       </div>
     );

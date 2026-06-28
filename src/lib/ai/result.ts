@@ -30,7 +30,11 @@ export interface RoutineResult {
   profile: Profile;
   picked: ScoredActive[];
   routine: Routine;
-  /** Step `type` -> grounded products. Absent steps fall back to the static catalog. */
+  /**
+   * Step `type` -> real-time grounded products from the AI. Present on AI results
+   * (shown verbatim — never topped up from the static catalog). Absent on the
+   * offline `local` fallback, which is the only path that uses the static catalog.
+   */
   productsByType?: Record<string, ShopProduct[]>;
   grounding?: GroundingInfo;
 }

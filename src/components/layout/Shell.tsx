@@ -7,18 +7,31 @@ interface Props {
   fraction: number;
   headerRight: string;
   children: ReactNode;
+  /** When reviewing/editing a saved routine, shows a persistent "Back to profile" link. */
+  onBackToProfile?: () => void;
 }
 
 const STAGES = ["Skin type", "Concerns", "Preferences"];
 
-export function Shell({ stageIndex, fraction, headerRight, children }: Props) {
+export function Shell({ stageIndex, fraction, headerRight, children, onBackToProfile }: Props) {
   return (
     <div className="w-full min-h-screen flex flex-col">
       <SiteHeader />
       <div className="flex-1 flex justify-center items-start px-5 pt-[34px] pb-14">
         <div className="w-full max-w-[640px]">
           <div className="mb-[26px]">
-            <div className="flex justify-end mb-[9px]">
+            <div className="flex justify-between items-center mb-[9px]">
+              {onBackToProfile ? (
+                <button
+                  type="button"
+                  onClick={onBackToProfile}
+                  className="border-none bg-transparent cursor-pointer p-0 font-mono text-[11px] tracking-[0.04em] uppercase text-ss-accent-ink hover:underline whitespace-nowrap"
+                >
+                  ← Back to profile
+                </button>
+              ) : (
+                <span />
+              )}
               <span className="font-mono text-[11.5px] tracking-[0.04em] uppercase text-ss-ink-faint whitespace-nowrap">
                 {headerRight}
               </span>

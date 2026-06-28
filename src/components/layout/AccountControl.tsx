@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Button } from "../ui/Button";
 import { useAuth } from "../../lib/firebase/useAuth";
 import { signInWithGoogle, signOutUser, POPUP_CLOSED } from "../../lib/firebase/client";
@@ -101,6 +102,14 @@ export function AccountControl({ full = false }: { full?: boolean }) {
         >
           <div className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-ink-faint mb-1">Signed in as</div>
           <div className="text-[14px] font-medium text-ss-ink truncate mb-[14px]">{user.email ?? label}</div>
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center justify-center mb-2 px-4 py-[11px] rounded-full no-underline border border-ss-hairline-strong bg-transparent text-ss-ink font-body text-[14.5px] font-medium"
+          >
+            Your profile
+          </Link>
           <Button variant="ghost" className="w-full justify-center" onClick={handleSignOut}>
             Sign out
           </Button>

@@ -57,9 +57,17 @@ export interface QuizSubmission {
  * in `src/types.ts`.
  */
 export interface QuizResultSnapshot {
+  /** Which engine produced this result ("ai" grounded, or "local" fallback). */
+  source?: "ai" | "local";
   profile: unknown;
   analysis: unknown;
   routine: unknown;
+  /** Scored ingredients/actives, so a saved routine can show its ingredients screen. */
+  picked?: unknown;
+  /** Grounded products keyed by routine step `type`. */
+  productsByType?: unknown;
+  /** Google Search grounding metadata (sources + Search Suggestions chip). */
+  grounding?: unknown;
 }
 
 /** Body of `POST /api/users`: what the browser sends to persist a completed quiz. */

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { RegionId, Routine, RoutineStep } from "../../types";
-import { productsForStep } from "../../data/products";
+import { productsForStep, slotForStep } from "../../data/products";
 import type { ShopProduct } from "../../lib/ai/result";
 import { Button } from "../ui/Button";
 import { Arrow } from "../ui/Arrow";
@@ -34,16 +34,23 @@ function ProductRow({ p }: { p: ShopProduct }) {
 }
 
 function ShopStep({ step, products }: { step: RoutineStep; products: ShopProduct[] }) {
-  if (!products.length) return null;
   return (
     <div>
       <div className="flex items-baseline gap-[7px] mb-[9px]">
         <span className="font-head font-semibold text-[15px] text-ss-ink tracking-[-0.01em]">{step.type}</span>
         {step.active && <span className="text-[13px] font-medium text-ss-accent-ink">· {step.active}</span>}
       </div>
-      <div className="grid gap-[7px]">
-        {products.map((p, i) => <ProductRow key={i} p={p} />)}
-      </div>
+      {products.length ? (
+        <div className="grid gap-[7px]">
+          {products.map((p, i) => <ProductRow key={i} p={p} />)}
+        </div>
+      ) : (
+        // The step still belongs in the routine, so never silently drop it — say so
+        // plainly when no current picks came back for it.
+        <p className="text-[12.5px] leading-[1.45] text-ss-ink-faint m-0 px-[13px] py-[10px] rounded-[11px] bg-ss-surface border border-ss-hairline [text-wrap:pretty]">
+          No current picks to show for this step — any well-formulated {step.type.toLowerCase()} suited to your skin works here.
+        </p>
+      )}
     </div>
   );
 }
@@ -82,15 +89,58 @@ export function ShopView({
   /** Grounded products keyed by step `type`; falls back to the static catalog. */
   productsByType?: Record<string, ShopProduct[]>;
 }) {
-  // Prefer grounded picks for a step; otherwise use the static regional catalog.
-  const resolve = (step: RoutineStep): ShopProduct[] =>
-    productsByType?.[step.type] ?? productsForStep(step, region);
+  // Match a routine step to the AI's products. The model keys products by a
+  // `stepType` string that SHOULD equal the routine step's `type`, but it often
+  // drifts ("Gentle Cleanser" / "Cleansing" vs "Cleanser"), which would silently
+  // drop that step's picks on an exact lookup. So match tolerantly: exact
+  // (normalised) first, then by product "slot" (cleanser/spf/active family), using
+  // the key string as its own active so active-specific slots resolve too.
+  const aiKeys = productsByType ? Object.keys(productsByType) : [];
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  // Collapse the catalog's fine slots into coarse step families, so a "Moisturizer"
+  // step matches any moisturiser-type key and a "Cleanser" any cleanser, while
+  // actives (vitc/niacinamide/…) stay their own family — a Vitamin C step never
+  // grabs niacinamide products.
+  const family = (slot: string | null): string | null =>
+    !slot ? null
+      : slot.startsWith("cleanser") ? "cleanser"
+      : slot.startsWith("moist") || slot === "nightcream" ? "moisturizer"
+      : slot;
+  const matchAiProducts = (step: RoutineStep): ShopProduct[] => {
+    const map = productsByType!;
+    const target = norm(step.type);
+    let key = aiKeys.find((k) => norm(k) === target);
+    if (!key) {
+      const fam = family(slotForStep(step));
+      if (fam) key = aiKeys.find((k) => family(slotForStep({ type: k, active: k, note: "" })) === fam);
+    }
+    return key ? map[key] : [];
+  };
+
+  // Product picks must be REAL-TIME: a live AI routine shows ONLY the grounded
+  // picks the model just researched — never the static catalog. The static
+  // catalog (`productsForStep`) is the OFFLINE fallback, used only when the AI was
+  // unavailable, which is exactly the case where `productsByType` is absent.
+  const resolve = (step: RoutineStep): ShopProduct[] => {
+    const source = productsByType
+      ? matchAiProducts(step)
+      : productsForStep(step, region).map((p) => ({ tier: p.tier, brand: p.brand, name: p.name, price: p.price }));
+    const out: ShopProduct[] = [];
+    const seen = new Set<string>();
+    for (const p of source) {
+      const key = `${p.brand}|${p.name}`.toLowerCase().trim();
+      if (out.length >= 3 || key === "|" || seen.has(key)) continue;
+      seen.add(key);
+      out.push(p);
+    }
+    return out;
+  };
   return (
     <div className="py-0.5">
       <ResultsEyebrow step={4} />
       <h1 className={resHeadlineClass}>Shop your routine</h1>
       <p className={resIntroClass}>
-        Three picks at different budgets for every step
+        A few picks at different budgets for every step
         {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : " — a mix from around the world"}. Brands are
         examples of the right <em>type</em> of product, not endorsements, and prices are approximate.
       </p>

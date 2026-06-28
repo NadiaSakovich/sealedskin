@@ -88,18 +88,24 @@ Write a thorough brief in PLAIN PROSE (do NOT use JSON or code blocks). Cover:
 2. An ordered AM and PM routine (cleanser -> treatments -> moisturizer -> SPF in \
 the morning), sized to the user's commitment level (minimal = essentials only; \
 balanced = one targeted serum; thorough = layered), with a short note per step.
-3. For each routine step, 1-3 current example products available in the user's \
-region, each with brand, product name, an approximate price, and a rough tier \
-(Budget/Mid/Premium).
+3. For each routine step, give EXACTLY THREE current example products available \
+in the user's region — ideally one Budget, one Mid, and one Premium; if you can't \
+find three distinct price tiers, still give three options (repeating a tier is \
+fine). Each needs a brand, product name, an approximate price, and a tier \
+(Budget/Mid/Premium). If the user stated a regional preference (e.g. Korean & \
+Asian, European), STRONGLY favour brands actually from that region for every step \
+— do not substitute well-known brands from other regions unless no suitable \
+regional option exists.
 
 ${SAFETY_RULES}`;
 
 // STEP 2 — structure the brief into the exact schema. No grounding here, so the
 // structured-output decoder produces clean, valid JSON.
 const STRUCTURE_SYSTEM = `You convert a skincare brief into structured data.
-Use ONLY the information in the brief; do not invent new products. For each shop \
-product, set "stepType" to EXACTLY match the "type" of the routine step it belongs \
-to, so it can be grouped under that step. Preserve the brief's safety guidance in \
+Use ONLY the information in the brief; do not invent new products. Include EVERY \
+product mentioned in the brief (the brief aims for three per routine step). For \
+each shop product, set "stepType" to EXACTLY match the "type" of the routine step \
+it belongs to, so it can be grouped under that step. Preserve the brief's safety guidance in \
 the routine notes. Output ONLY data matching the provided schema.
 
 ${SAFETY_RULES}`;

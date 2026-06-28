@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { SKIN_TYPE_QUESTIONS } from "../data/questions";
 import { SKIN_CONCERNS } from "../data/concerns";
 import { SKIN_GOALS, COMMITMENT_LEVELS, REGIONS } from "../data/goals";
@@ -29,21 +30,26 @@ import {
   buildLocalResult,
   type RoutineResult,
 } from "../lib/ai/result";
-import type { SaveQuizRequest, QuizAnswer, AiRoutineOutput } from "../lib/domain/types";
+import type { SaveQuizRequest, QuizAnswer, AiRoutineOutput, QuizSubmission } from "../lib/domain/types";
 import type { GroundingInfo } from "../lib/ai/types";
+import { takeEditQuiz } from "../lib/editSession";
 
 // Locked configuration (Tweaks removed).
 const CONFIG: { answerStyle: AnswerStyle; autoAdvance: boolean } = { answerStyle: "cards", autoAdvance: false };
 
-/** Reveal-from-hidden wrapper so a throttled timeline never leaves content invisible. */
-function Screen({ screenKey, dir, children }: { screenKey: string; dir: "fwd" | "back"; children: ReactNode }) {
+// Stage 1 intro hero rotates between these portraits — one picked at random per page load.
+const INTRO_SKIN_IMAGES = ["/quiz/intro-skin-1.jpg", "/quiz/intro-skin-2.jpg", "/quiz/intro-skin-3.jpg"];
+
+/** The actual reveal: mounts hidden, then fades/slides in one tick later. */
+function ScreenReveal({ dir, children }: { dir: "fwd" | "back"; children: ReactNode }) {
   const [shown, setShown] = useState(false);
   useEffect(() => {
     window.scrollTo(0, 0);
-    setShown(false);
+    // Flips asynchronously (via the timeout), so this is the intended one-shot
+    // reveal, not a synchronous cascading render.
     const id = window.setTimeout(() => setShown(true), 30);
     return () => clearTimeout(id);
-  }, [screenKey]);
+  }, []);
   return (
     <div
       className="transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(.22,1,.36,1)]"
@@ -54,11 +60,47 @@ function Screen({ screenKey, dir, children }: { screenKey: string; dir: "fwd" | 
   );
 }
 
+/**
+ * Reveal-from-hidden wrapper so a throttled timeline never leaves content
+ * invisible. Keying the inner reveal on `screenKey` remounts it on every screen
+ * change, so each screen starts hidden and animates in — no in-effect state
+ * reset needed.
+ */
+function Screen({ screenKey, dir, children }: { screenKey: string; dir: "fwd" | "back"; children: ReactNode }) {
+  return (
+    <ScreenReveal key={screenKey} dir={dir}>
+      {children}
+    </ScreenReveal>
+  );
+}
+
 const eyebrowClass = "font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3";
 const introH1Class = "font-head font-semibold text-[29px] leading-[1.13] tracking-[-0.025em] text-ss-ink mx-auto mb-[14px] max-w-[430px] [text-wrap:balance]";
 const introPClass = "text-[16px] leading-[1.55] text-ss-ink-soft max-w-[410px] mx-auto mb-[30px] [text-wrap:pretty]";
 const qH2Class = "font-head font-semibold text-[25px] leading-[1.18] tracking-[-0.02em] text-ss-ink m-0 mb-2 [text-wrap:balance]";
 const qHelpClass = "text-[14.5px] leading-[1.5] text-ss-ink-soft m-0 [text-wrap:pretty]";
+
+/** Order-independent equality for the string-id arrays (concerns, top concerns). */
+function sameSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((x) => set.has(x));
+}
+
+/** Has the quiz state drifted from the saved submission we opened for review? */
+function submissionChanged(orig: QuizSubmission, cur: QuizSubmission): boolean {
+  const ka = Object.keys(orig.answers);
+  const kb = Object.keys(cur.answers);
+  const answersChanged =
+    ka.length !== kb.length || ka.some((k) => orig.answers[k] !== cur.answers[k]);
+  return (
+    answersChanged ||
+    !sameSet(orig.concerns, cur.concerns) ||
+    !sameSet(orig.topConcerns, cur.topConcerns) ||
+    orig.commitment !== cur.commitment ||
+    orig.region !== cur.region
+  );
+}
 
 function CountPill({ active, children }: { active: boolean; children: ReactNode }) {
   return (
@@ -73,6 +115,7 @@ function CountPill({ active, children }: { active: boolean; children: ReactNode 
 }
 
 export default function SkinQuiz() {
+  const router = useRouter();
   const QS = SKIN_TYPE_QUESTIONS;
   // Stage 1 asks the diagnostic skin questions; the pregnancy question moves to
   // Stage 3 (Preferences), since it's personal context, not skin behaviour.
@@ -98,6 +141,21 @@ export default function SkinQuiz() {
   const [aiResult, setAiResult] = useState<RoutineResult | null>(null);
   const [building, setBuilding] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Set when editing a saved routine, so saving updates that routine in place.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // The saved submission we opened, to detect whether the user changed anything.
+  const [editOriginal, setEditOriginal] = useState<QuizSubmission | null>(null);
+  // In review mode: false = the landing hub (3 buttons); true = the user chose
+  // "edit quiz" and is walking the quiz, so the finale shows rebuild/show.
+  const [reviewEditing, setReviewEditing] = useState(false);
+
+  // Pick the intro hero on mount (client-only) so each visit can differ; the server
+  // always renders index 0, so this avoids an SSR/CSR hydration mismatch.
+  const [introImageIdx, setIntroImageIdx] = useState(0);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legit client-only pick to avoid a hydration mismatch
+    setIntroImageIdx(Math.floor(Math.random() * INTRO_SKIN_IMAGES.length));
+  }, []);
 
   // Step map: 0 intro · 1..N skin Qs · S2 (intro,pick,priority,analysis) · S3 (commit,region,pregnancy) · finale · results
   const S2_INTRO = N + 1;
@@ -116,6 +174,47 @@ export default function SkinQuiz() {
   const hasPriority = concerns.length >= 2;
 
   useEffect(() => () => clearTimeout(advanceRef.current), []);
+
+  // Reviewing a saved routine: the profile stashes it and sends us to `/?edit=1`.
+  // Restore the answers + the saved result, then land on the finale ("Your skin
+  // profile is ready"), which becomes a review hub (review routine / edit quiz /
+  // back to profile). The finale starts at opacity 0, so swapping the step here
+  // causes no visible flash.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("edit") !== "1") return;
+    const payload = takeEditQuiz();
+    if (!payload) return;
+    const { submission, result } = payload;
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot hydration from an external (sessionStorage) source */
+    setAnswers(submission.answers ?? {});
+    setConcerns(submission.concerns ?? []);
+    setTopConcerns(submission.topConcerns ?? []);
+    setCommitment(submission.commitment ?? null);
+    setRegion((submission.region as RegionId | null) ?? null);
+    setEditingId(payload.id);
+    setEditOriginal({
+      answers: submission.answers ?? {},
+      concerns: submission.concerns ?? [],
+      topConcerns: submission.topConcerns ?? [],
+      commitment: submission.commitment ?? null,
+      region: submission.region ?? null,
+    });
+    setReviewEditing(false);
+    setAiResult({
+      source: result.source ?? "local",
+      analysis: result.analysis,
+      profile: result.profile,
+      picked: result.picked ?? [],
+      routine: result.routine,
+      productsByType: result.productsByType,
+      grounding: result.grounding,
+    } as RoutineResult);
+    setStep(FINISH);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // Drop the query param so a refresh starts a fresh quiz, not another edit.
+    window.history.replaceState(null, "", "/");
+  }, [FINISH]);
 
   function go(next: number, direction: "fwd" | "back" = "fwd") {
     clearTimeout(advanceRef.current);
@@ -271,7 +370,20 @@ export default function SkinQuiz() {
     </div>
   );
 
-  const shellProps = { stageIndex, fraction, headerRight };
+  // Have the answers drifted from the saved routine we opened? Drives both the
+  // finale "rebuild vs show" CTA and whether the shop page offers to save changes.
+  const reviewChanged =
+    editingId && editOriginal
+      ? submissionChanged(editOriginal, { answers, concerns, topConcerns, commitment, region })
+      : false;
+
+  const shellProps = {
+    stageIndex,
+    fraction,
+    headerRight,
+    // In review/edit mode, keep a "Back to profile" escape on every screen.
+    onBackToProfile: editingId ? () => router.push("/profile") : undefined,
+  };
 
   // ---- Intro ----
   if (step === 0) {
@@ -279,7 +391,7 @@ export default function SkinQuiz() {
       <Shell {...shellProps}>
         <Screen screenKey="intro" dir={dir}>
           <div className="text-center pt-2 pb-1">
-            <div className="flex justify-center mb-[26px]"><div className="w-[132px]"><PhotoSlot label="Healthy glowing skin" src="/quiz/intro-skin.jpg" radius={18} /></div></div>
+            <div className="flex justify-center mb-[26px]"><div className="w-[132px]"><PhotoSlot label="Healthy glowing skin" src={INTRO_SKIN_IMAGES[introImageIdx]} radius={18} imageClassName="scale-[1.33] origin-top" /></div></div>
             <div className={eyebrowClass}>Stage 1 of 3 · Skin type</div>
             <h1 className="font-head font-semibold text-[30px] leading-[1.12] tracking-[-0.025em] text-ss-ink mx-auto mb-[14px] max-w-[420px] [text-wrap:balance]">
               Let&rsquo;s figure out your skin type
@@ -451,6 +563,18 @@ export default function SkinQuiz() {
   if (step === FINISH) {
     const chosenConcerns = CONCERNS.filter((c) => concerns.includes(c.id));
     const level = LEVELS.find((l) => l.id === commitment);
+    // When opened from a saved routine, the finale becomes a review hub.
+    const review = editingId
+      ? {
+          stage: reviewEditing ? ("editing" as const) : ("landing" as const),
+          changed: reviewChanged,
+          onReviewRoutine: () => go(R_NEEDS),
+          onEditQuiz: () => { setReviewEditing(true); go(1, "back"); },
+          onBackToProfile: () => router.push("/profile"),
+          onRebuild: () => { startBuild(selectedModel); go(R_NEEDS); },
+          onShow: () => go(R_NEEDS),
+        }
+      : undefined;
     return (
       <Shell {...shellProps}>
         <Screen screenKey="finish" dir={dir}>
@@ -461,10 +585,11 @@ export default function SkinQuiz() {
             topConcerns={topConcerns}
             level={level}
             onBuild={() => { startBuild(selectedModel); go(R_NEEDS); }}
-            onEditSkin={() => go(1, "back")}
-            onEditConcerns={() => go(S2_PICK, "back")}
-            onEditRoutine={() => go(S3_COMMIT, "back")}
+            onEditSkin={() => { if (editingId) setReviewEditing(true); go(1, "back"); }}
+            onEditConcerns={() => { if (editingId) setReviewEditing(true); go(S2_PICK, "back"); }}
+            onEditRoutine={() => { if (editingId) setReviewEditing(true); go(S3_COMMIT, "back"); }}
             onBack={() => go(S3_PREG, "back")}
+            review={review}
           />
         </Screen>
       </Shell>
@@ -545,7 +670,15 @@ export default function SkinQuiz() {
     const { analysis, profile, routine } = result;
     const savePayload: SaveQuizRequest = {
       submission: { answers, concerns, topConcerns, commitment, region },
-      result: { profile, analysis, routine },
+      result: {
+        source: result.source,
+        profile,
+        analysis,
+        routine,
+        picked: result.picked,
+        productsByType: result.productsByType,
+        grounding: result.grounding,
+      },
     };
     return (
       <Shell {...shellProps}>
@@ -557,8 +690,14 @@ export default function SkinQuiz() {
             regionLabel={profile.regionLabel}
             productsByType={result.productsByType}
             onBack={() => go(R_ROUTINE, "back")}
-            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); go(0, "back"); }}
-            saveSlot={<SaveRoutine payload={savePayload} />}
+            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); go(0, "back"); }}
+            // Fresh quiz → offer to save. Reviewing a saved routine → only offer to
+            // save when something actually changed (a pure review needs no save).
+            saveSlot={
+              !editingId || reviewChanged
+                ? <SaveRoutine payload={savePayload} editId={editingId ?? undefined} />
+                : undefined
+            }
           />
           {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
