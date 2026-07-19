@@ -6,6 +6,19 @@ import { Button } from "../ui/Button";
 import { Arrow } from "../ui/Arrow";
 import { ResultsEyebrow, resHeadlineClass, resIntroClass } from "./NeedsSummary";
 
+/** Numeric value of a price string ("$18", "£20", "€15–20", "20") for sorting. */
+function priceValue(price: string): number {
+  const m = price.replace(/,/g, "").match(/\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : Number.POSITIVE_INFINITY;
+}
+
+/** Budget/Mid/Premium label for a pick's price rank within its step's list. */
+function tierForRank(i: number, n: number): ShopProduct["tier"] {
+  if (n <= 1) return "Mid";
+  if (n === 2) return i === 0 ? "Budget" : "Premium";
+  return i === 0 ? "Budget" : i === n - 1 ? "Premium" : "Mid";
+}
+
 function ProductRow({ p }: { p: ShopProduct }) {
   const name = p.url ? (
     <a
@@ -133,12 +146,18 @@ export function ShopView({
       seen.add(key);
       out.push(p);
     }
-    return out;
+    // Tiers must be monotonic in price — the source labels (AI- or catalog-assigned)
+    // can put a "Mid" above a "Premium". Sort the picks cheapest→priciest and
+    // relabel Budget/Mid/Premium by rank, so what the user sees always reads in
+    // ascending price. Picks without a parseable price sort last.
+    out.sort((a, b) => priceValue(a.price) - priceValue(b.price));
+    const n = out.length;
+    return out.map((p, i) => ({ ...p, tier: tierForRank(i, n) }));
   };
   return (
     <div className="py-0.5">
       <ResultsEyebrow step={4} />
-      <h1 className={resHeadlineClass}>Shop your routine</h1>
+      <h1 className={resHeadlineClass}>Products for your routine</h1>
       <p className={resIntroClass}>
         A few picks at different budgets for every step
         {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : " — a mix from around the world"}. Brands are

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "../ui/Button";
 import { signInWithGoogle, getCurrentIdToken, POPUP_CLOSED } from "../../lib/firebase/client";
 import { useAuth } from "../../lib/firebase/useAuth";
 import type { SaveQuizRequest } from "../../lib/domain/types";
 
-type Status = "idle" | "saving" | "saved" | "error";
+type Status = "idle" | "saving" | "saved" | "error" | "limit";
 
 /**
  * End-of-results prompt to save the routine. Signs in with Google in the browser,
@@ -37,6 +38,12 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
         body: JSON.stringify(editing ? { ...payload, id: editId } : payload),
       });
       if (!res.ok) {
+        // 409 = the account already holds the max of 3 saved routines. This isn't
+        // a failure to surface as a generic error — show the friendly limit note.
+        if (res.status === 409) {
+          setStatus("limit");
+          return;
+        }
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `Save failed (${res.status})`);
       }
@@ -52,6 +59,26 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
     }
   }
 
+  if (status === "limit") {
+    return (
+      <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-surface px-[18px] py-[15px]">
+        <p className="font-head font-semibold text-[16px] text-ss-ink m-0 mb-1">
+          You&rsquo;ve reached 3 saved routines
+        </p>
+        <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[14px] [text-wrap:pretty]">
+          An account can keep up to 3 saved routines. To save this one, delete a routine you no
+          longer need from your account, then save again.
+        </p>
+        <Link
+          href="/profile"
+          className="inline-flex items-center gap-[8px] px-[18px] py-[10px] rounded-full no-underline bg-ss-accent text-ss-on-accent font-body text-[14px] font-semibold tracking-[-0.01em]"
+        >
+          Go to my account
+        </Link>
+      </div>
+    );
+  }
+
   if (status === "saved") {
     return (
       <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-accent-tint px-[18px] py-[15px] text-center">
@@ -60,7 +87,7 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
         </p>
         <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mt-1 [text-wrap:pretty]">
           {editing
-            ? "Your changes are saved to this routine. Find it any time on your profile."
+            ? "Your changes are saved to this routine. Find it any time in your account."
             : "Your routine is saved to your account. Sign in again any time to pick it back up."}
         </p>
       </div>
@@ -74,7 +101,7 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
       </p>
       <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[14px] [text-wrap:pretty]">
         {editing
-          ? "Update this routine in your profile with the changes you just made."
+          ? "Update this routine in your account with the changes you just made."
           : user
             ? "Save this routine to your account and come back to it later."
             : "Create a free account to keep this routine and come back to it later."}

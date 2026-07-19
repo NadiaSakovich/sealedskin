@@ -7,7 +7,7 @@ interface Props {
   fraction: number;
   headerRight: string;
   children: ReactNode;
-  /** When reviewing/editing a saved routine, shows a persistent "Back to profile" link. */
+  /** When reviewing/editing a saved routine, shows a persistent "Back to my account" link. */
   onBackToProfile?: () => void;
 }
 
@@ -27,7 +27,7 @@ export function Shell({ stageIndex, fraction, headerRight, children, onBackToPro
                   onClick={onBackToProfile}
                   className="border-none bg-transparent cursor-pointer p-0 font-mono text-[11px] tracking-[0.04em] uppercase text-ss-accent-ink hover:underline whitespace-nowrap"
                 >
-                  ← Back to profile
+                  ← Back to my account
                 </button>
               ) : (
                 <span />

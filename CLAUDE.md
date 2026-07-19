@@ -120,8 +120,10 @@ user can compare; to be removed once one model is chosen.
 3. **Stage 3 — Preferences:** commitment level (minimal/balanced/thorough) → region →
    pregnancy/nursing.
 4. **Finale** ("Your skin profile is ready"): review card with **edit** links on Skin type,
-   Concerns, and Routine sections → "Build my routine". When opened from a **saved** routine the
-   finale becomes a **review hub** instead (see "Saved-routine review hub").
+   Concerns, and Routine sections → "Build my routine". The round accent badge/icon that used to
+   sit above the heading was **removed** — now just the "Profile complete" eyebrow + heading. When
+   opened from a **saved** routine the finale becomes a **review hub** instead (see "Saved-routine
+   review hub").
 5. **Results:** Needs summary → Ingredients → AM/PM Routine → Shop.
 
 Note: the pregnancy question lives in `src/data/questions.ts` (id `pregnancy`) but is rendered
@@ -165,16 +167,33 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
   sign-in prompt; signed-in fetches `GET /api/users` and renders the profile + saved routines.
 - **API (`route.ts`, all token-verified via `authedUid`):** `GET` returns `{ profile, quizzes }` —
   the user's saved quizzes from `users/{uid}/quizzes`, newest first, with the Firestore `createdAt`
-  Timestamp converted to **epoch millis** (serializable). `POST` creates a new saved routine; `PUT`
-  (body carries `id`) **updates one in place** (used when editing a saved routine); `DELETE` (body
-  carries `id`) removes one. All go through the Admin SDK server-side, so `firestore.rules` stays
-  **deny-all** (no client Firestore access).
+  Timestamp converted to **epoch millis** (serializable) and an `isMain` boolean per quiz. `POST`
+  creates a new saved routine; `PUT` (body carries `id`) **updates one in place** (used when editing
+  a saved routine); `PATCH` (body carries `id`) **sets that routine as the single main routine**
+  (clears `isMain` on all others in one batch); `DELETE` (`?id=` query param) removes one. All go
+  through the Admin SDK server-side, so `firestore.rules` stays **deny-all** (no client Firestore
+  access).
+- **Max 3 routines + one "main" (`isMain`):** an account may keep **at most 3** saved routines.
+  `POST` enforces this server-side — a 4th returns **HTTP 409** with a friendly message; `SaveRoutine`
+  special-cases 409 into a "you've reached 3 saved routines — delete one" panel (with a link to the
+  account) rather than a generic error. Editing (`PUT`) is exempt. Exactly one routine is **main**:
+  the **first** save becomes main; `PATCH` promotes any other (only one main at a time); deleting the
+  main **auto-promotes the newest remaining**; `GET` treats the newest as main if none is flagged
+  (legacy saves). `ProfileView` shows a **"Main routine"** badge (accent border) on the main and a
+  **"Set as main"** action on the others, plus a "N of 3 saved" count and an at-limit note.
 - **List:** routines render as cards labeled **"Routine N · {skin type}"** (N from list position so
-  "Routine 1" is the oldest; newest gets the highest number) with top concerns + save date, plus a
-  **delete** action (`handleDelete` → `DELETE /api/users`). Clicking a card **opens it back in the
-  quiz** for review/edit (`handleOpen` → `stashEditQuiz` + `router.push("/?edit=1")`); there is no
-  longer a separate read-only detail component (the old `SavedRoutineDetail.tsx` was removed; the
-  `SavedResult` type now lives in `components/profile/types.ts`).
+  "Routine 1" is the oldest; newest gets the highest number) with top concerns + save date, a
+  **delete** action (`handleDelete` → `DELETE /api/users`), and a footer showing the **main-routine
+  badge** or a **"Set as main"** button (`handleSetMain` → `PATCH /api/users`). Clicking a card
+  **opens it back in the quiz** for review/edit (`handleOpen` → `stashEditQuiz` +
+  `router.push("/?edit=1")`); there is no longer a separate read-only detail component (the old
+  `SavedRoutineDetail.tsx` was removed; the `SavedResult` type now lives in
+  `components/profile/types.ts`).
+- **"Profile" vs "Account" naming:** the `/profile` route/dir/component names are unchanged, but the
+  **user-facing** account label is now **"Account"** (not "Profile"), to avoid confusion with the
+  **skin** profile ("Your skin profile is ready"). Account/nav labels also read **"My …"** (My
+  account, ← Back to my account, My routines); results/routine screens keep **"Your …"** ("Your
+  everyday routine", the "Your routine" eyebrow). Skin-profile copy is left as-is.
 - **Richer saved snapshot:** `QuizResultSnapshot` (`lib/domain/types.ts`) also carries optional
   `source`, `picked` (ingredients), `productsByType`, and `grounding`; `SkinQuiz.startBuild`'s save
   payload passes them, so a reopened routine renders as fully as the live results (and shows the
@@ -234,6 +253,14 @@ a hardcoded list. The flow (`components/results/ShopView.tsx`):
   a plain note rather than disappearing, so the Shop page always mirrors the routine.
 - The intro copy says "**A few** picks at different budgets per step" (not "Three") since live counts
   depend on what grounding returns.
+- **Tiers are derived from price (monotonic).** The source tier labels — whether AI-assigned or from
+  the static catalog — can put a "Mid" above a "Premium". So `ShopView.resolve` **relabels**: after
+  collecting a step's ≤3 picks it sorts them cheapest→priciest (`priceValue` parses `$/£/€`, commas,
+  and ranges → first number; unparseable sorts last) and assigns Budget/Mid/Premium by **rank**
+  (`tierForRank`: 3 picks → Budget/Mid/Premium, 2 → Budget/Premium, 1 → Mid). This guarantees
+  Budget ≤ Mid ≤ Premium for **both** the live AI picks and the offline catalog.
+- **Labels:** the routine screen CTA reads "**See recommended products**" (`RoutineView`), and the
+  shop screen heading is "**Products for your routine**" (`ShopView`).
 - `products.ts` catalog depth: every **common** routine slot has ≥3 options per major region
   (asia/us/eu) so the offline fallback can honour a region preference without borrowing off-region
   brands; niche actives (azelaic/benzoyl/squalane/cica) may still mix, matching the "leaning toward
@@ -398,6 +425,26 @@ Google Chrome** from a throwaway dir to keep project deps clean:
     now asks for 3 picks/step and to favour the stated region.
 19. **Stage-1 intro hero now rotates** between `intro-skin-1/2/3.jpg` (random per load, SSR-safe);
     the single `intro-skin.jpg` was removed.
+20. **Finale, account naming, routine cap, shop labels & product tiers (this session):**
+    - **Removed the finale's round accent badge/icon** above "Your skin profile is ready"
+      (`FinaleScreen`).
+    - **Renamed user-facing "Profile" → "Account"** (account contexts only): `AccountControl`
+      ("My account"), `Shell` ("← Back to my account"), `FinaleScreen` review button/prose,
+      `SaveRoutine` copy, `ProfileView` eyebrows, and the `/profile` `<title>`. Account/nav labels use
+      **"My …"**; results/routine screens keep **"Your …"**. Skin-profile text and the `/profile`
+      route/file names are unchanged.
+    - **Capped saved routines at 3 with one main routine:** `POST` returns **409** on a 4th (friendly
+      panel in `SaveRoutine`); added `isMain` + `PATCH` (set-main), delete-auto-promote, and `GET`
+      normalization; `ProfileView` gained the Main badge / "Set as main" action, a "N of 3 saved"
+      count, and an at-limit note. See "Max 3 routines + one main" under User profile.
+    - **Shop labels:** routine CTA → "See recommended products"; shop heading → "Products for your
+      routine".
+    - **Fixed product tier ordering:** tiers are now **derived from price** in `ShopView.resolve`
+      (`priceValue`/`tierForRank`), so Budget ≤ Mid ≤ Premium always holds for AI and offline picks.
+    - Verified: `tsc`/ESLint clean; Playwright drive confirmed the finale badge is gone, shop tiers are
+      monotonic on a **live AI** result, and the account eyebrow renamed — 0 console errors. The
+      **signed-in** main/limit paths are type/lint-checked but not clicked through (need real Google
+      auth).
 
 ## Likely next steps
 

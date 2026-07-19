@@ -73,18 +73,13 @@ export function FinaleScreen({
   return (
     <div className="py-1">
       <div className="text-center mb-[26px]">
-        <div className="w-[60px] h-[60px] rounded-full bg-ss-accent flex items-center justify-center mx-auto mb-5">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 2.5l2.1 5.1 5.4.5-4.1 3.6 1.2 5.3L12 19.8 7.4 22.5l1.2-5.3-4.1-3.6 5.4-.5z" fill="#f6faf8" />
-          </svg>
-        </div>
         <div className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3">Profile complete</div>
         <h1 className="font-head font-semibold text-[29px] leading-[1.13] tracking-[-0.025em] text-ss-ink mx-auto mb-[14px] max-w-[430px] [text-wrap:balance]">
           Your skin profile is ready
         </h1>
         <p className="text-[16px] leading-[1.55] text-ss-ink-soft max-w-[410px] mx-auto mb-0 [text-wrap:pretty]">
           {review
-            ? "Here’s the profile behind this saved routine. Review the routine, edit your answers, or head back to your profile."
+            ? "Here’s the profile behind this saved routine. Review the routine, edit your answers, or head back to your account."
             : "Here’s everything you told us. Review it, tweak anything, then build your routine."}
         </p>
       </div>
@@ -146,7 +141,7 @@ export function FinaleScreen({
             <Arrow back /> Review &amp; edit quiz
           </Button>
           <Button variant="ghost" onClick={review.onBackToProfile}>
-            Back to profile
+            Back to my account
           </Button>
         </div>
       )}

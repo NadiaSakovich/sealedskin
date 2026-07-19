@@ -108,7 +108,7 @@ export function AccountControl({ full = false }: { full?: boolean }) {
             onClick={() => setOpen(false)}
             className="flex w-full items-center justify-center mb-2 px-4 py-[11px] rounded-full no-underline border border-ss-hairline-strong bg-transparent text-ss-ink font-body text-[14.5px] font-medium"
           >
-            Your profile
+            My account
           </Link>
           <Button variant="ghost" className="w-full justify-center" onClick={handleSignOut}>
             Sign out

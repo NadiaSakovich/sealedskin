@@ -46,8 +46,16 @@ export async function GET(req: Request) {
         createdAt: createdAt && typeof createdAt.toMillis === "function" ? createdAt.toMillis() : null,
         submission: data.submission ?? null,
         result: data.result ?? null,
+        isMain: data.isMain === true,
       };
     });
+
+    // Exactly one routine is the "main" one. If nothing is flagged (e.g. legacy
+    // saves), treat the newest (first, since ordered desc) as main so the UI
+    // always has a main to show.
+    if (quizzes.length && !quizzes.some((q) => q.isMain)) {
+      quizzes[0].isMain = true;
+    }
 
     return NextResponse.json({
       profile: {
@@ -135,13 +143,73 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await adminDb()
+    const quizzesRef = adminDb()
       .collection("users")
       .doc(token.uid)
-      .collection("quizzes")
-      .doc(id)
-      .delete();
+      .collection("quizzes");
+
+    // Note whether we're removing the main routine before deleting it.
+    const doomed = await quizzesRef.doc(id).get();
+    const wasMain = doomed.exists && doomed.data()?.isMain === true;
+
+    await quizzesRef.doc(id).delete();
+
+    // Keep exactly one main: if the deleted routine was main, promote the newest
+    // remaining routine.
+    if (wasMain) {
+      const rest = await quizzesRef.orderBy("createdAt", "desc").limit(1).get();
+      if (!rest.empty) {
+        await rest.docs[0].ref.set({ isMain: true }, { merge: true });
+      }
+    }
     return NextResponse.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/users
+ * Headers: Authorization: Bearer <Firebase ID token>
+ * Body: { id: string }
+ *
+ * Marks the given routine as the account's single "main" routine, clearing the
+ * flag on all others. Only one main routine is allowed at a time.
+ */
+export async function PATCH(req: Request) {
+  const token = await authedUid(req);
+  if (!token) {
+    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+  }
+
+  let body: { id?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (!body?.id) {
+    return NextResponse.json({ error: "Body must include `id`" }, { status: 400 });
+  }
+
+  try {
+    const quizzesRef = adminDb()
+      .collection("users")
+      .doc(token.uid)
+      .collection("quizzes");
+    if (!(await quizzesRef.doc(body.id).get()).exists) {
+      return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    }
+
+    // One main at a time: set the target and clear every other in a single batch.
+    const all = await quizzesRef.get();
+    const batch = adminDb().batch();
+    all.docs.forEach((doc) => {
+      batch.set(doc.ref, { isMain: doc.id === body.id }, { merge: true });
+    });
+    await batch.commit();
+    return NextResponse.json({ ok: true, mainId: body.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -193,6 +261,21 @@ export async function POST(req: Request) {
     const db = adminDb();
     const userRef = db.collection("users").doc(token.uid);
 
+    // Cap saved routines at 3 per account. Enforced here (creation only) — editing
+    // an existing routine goes through PUT and is unaffected.
+    const existing = await userRef.collection("quizzes").get();
+    if (existing.size >= 3) {
+      return NextResponse.json(
+        {
+          error:
+            "You can keep up to 3 saved routines. Delete one from your account to save a new one.",
+        },
+        { status: 409 },
+      );
+    }
+    // The first routine an account saves becomes its main routine.
+    const isFirst = existing.empty;
+
     const profile = {
       uid: token.uid,
       email: token.email ?? null,
@@ -209,6 +292,7 @@ export async function POST(req: Request) {
     const quizRef = await userRef.collection("quizzes").add({
       submission: body.submission,
       result: body.result,
+      isMain: isFirst,
       createdAt: FieldValue.serverTimestamp(),
     });
 

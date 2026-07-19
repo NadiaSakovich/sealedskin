@@ -16,7 +16,11 @@ interface SavedQuiz {
   createdAt: number | null;
   submission: QuizSubmission | null;
   result: SavedResult | null;
+  isMain?: boolean;
 }
+
+/** An account can keep at most this many saved routines. */
+const MAX_ROUTINES = 3;
 
 interface ProfileData {
   profile: { uid: string; email: string | null; displayName: string | null; photoURL: string | null };
@@ -67,6 +71,7 @@ export function ProfileView() {
   const [error, setError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [settingMainId, setSettingMainId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Await before the first setState so this is safe to call straight from an
@@ -141,11 +146,46 @@ export function ProfileView() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `Delete failed (${res.status})`);
       }
-      setData((d) => (d ? { ...d, quizzes: d.quizzes.filter((q) => q.id !== id) } : d));
+      setData((d) => {
+        if (!d) return d;
+        const remaining = d.quizzes.filter((q) => q.id !== id);
+        // Mirror the server: if we removed the main routine, the newest remaining
+        // one (list is newest-first) becomes main.
+        const removedMain = d.quizzes.find((q) => q.id === id)?.isMain;
+        if (removedMain && remaining.length && !remaining.some((q) => q.isMain)) {
+          remaining[0] = { ...remaining[0], isMain: true };
+        }
+        return { ...d, quizzes: remaining };
+      });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Couldn't delete that routine");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleSetMain(id: string) {
+    setSettingMainId(id);
+    setActionError(null);
+    try {
+      const idToken = await getCurrentIdToken();
+      if (!idToken) throw new Error("Please sign in again");
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Couldn't update (${res.status})`);
+      }
+      setData((d) =>
+        d ? { ...d, quizzes: d.quizzes.map((q) => ({ ...q, isMain: q.id === id })) } : d,
+      );
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Couldn't set the main routine");
+    } finally {
+      setSettingMainId(null);
     }
   }
 
@@ -154,7 +194,7 @@ export function ProfileView() {
     return (
       <div className="py-16 text-center">
         <div className="mx-auto mb-5 w-9 h-9 rounded-full border-[3px] border-ss-hairline border-t-ss-accent animate-spin" />
-        <p className="text-[14.5px] text-ss-ink-soft">Loading your profile…</p>
+        <p className="text-[14.5px] text-ss-ink-soft">Loading your account…</p>
       </div>
     );
   }
@@ -162,7 +202,7 @@ export function ProfileView() {
   if (!user) {
     return (
       <div className="py-10">
-        <div className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3">Profile</div>
+        <div className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3">Account</div>
         <h1 className="font-head font-semibold text-[28px] leading-[1.12] tracking-[-0.025em] text-ss-ink m-0 mb-3 [text-wrap:balance]">
           Sign in to see your routines
         </h1>
@@ -185,7 +225,7 @@ export function ProfileView() {
   // --- Profile + saved routines list ---
   return (
     <div className="py-0.5">
-      <div className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3">Profile</div>
+      <div className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3">Account</div>
 
       <div className="flex items-center gap-[18px] mb-9">
         <Avatar photoURL={photoURL} label={displayName} />
@@ -200,10 +240,12 @@ export function ProfileView() {
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-baseline gap-2">
           <h2 className="font-head font-semibold text-[20px] leading-[1.2] tracking-[-0.02em] text-ss-ink m-0">
-            Saved routines
+            My routines
           </h2>
           {quizzes.length > 0 && (
-            <span className="font-mono text-[12px] text-ss-ink-faint">{quizzes.length} saved</span>
+            <span className="font-mono text-[12px] text-ss-ink-faint">
+              {quizzes.length} of {MAX_ROUTINES} saved
+            </span>
           )}
         </div>
         <Link
@@ -213,6 +255,15 @@ export function ProfileView() {
           New routine <Arrow />
         </Link>
       </div>
+
+      {state === "ready" && quizzes.length >= MAX_ROUTINES && (
+        <div className="rounded-[14px] border border-ss-hairline bg-ss-accent-tint px-[18px] py-3 mb-4">
+          <p className="text-[13px] leading-[1.5] text-ss-ink-soft m-0 [text-wrap:pretty]">
+            You&rsquo;ve saved the maximum of {MAX_ROUTINES} routines. To add a new one, delete a
+            routine below first.
+          </p>
+        </div>
+      )}
 
       {actionError && (
         <div className="rounded-[14px] border border-ss-hairline bg-ss-surface px-[18px] py-3 mb-4">
@@ -257,47 +308,75 @@ export function ProfileView() {
             return (
               <li
                 key={q.id}
-                className="flex items-stretch gap-2 rounded-2xl bg-ss-surface border border-ss-hairline overflow-hidden hover:border-ss-hairline-strong transition-colors"
+                className={`rounded-2xl bg-ss-surface border overflow-hidden transition-colors ${
+                  q.isMain ? "border-ss-accent" : "border-ss-hairline hover:border-ss-hairline-strong"
+                }`}
               >
-                <button
-                  type="button"
-                  onClick={() => handleOpen(q)}
-                  disabled={!q.result || !q.submission}
-                  className="flex-1 min-w-0 text-left flex items-center gap-4 px-[18px] py-4 bg-transparent border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="shrink-0 w-10 h-10 rounded-full bg-ss-accent-tint text-ss-accent-ink font-head font-semibold text-[15px] inline-flex items-center justify-center">
-                    {num}
-                  </span>
-                  <span className="flex-1 min-w-0 block">
-                    <span className="block font-head font-semibold text-[16px] text-ss-ink tracking-[-0.01em]">
-                      Routine {num}
-                      <span className="font-body font-medium text-ss-accent-ink"> · {skinTypeLabel(q)}</span>
+                <div className="flex items-stretch gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpen(q)}
+                    disabled={!q.result || !q.submission}
+                    className="flex-1 min-w-0 text-left flex items-center gap-4 px-[18px] py-4 bg-transparent border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="shrink-0 w-10 h-10 rounded-full bg-ss-accent-tint text-ss-accent-ink font-head font-semibold text-[15px] inline-flex items-center justify-center">
+                      {num}
                     </span>
-                    <span className="block text-[13px] leading-[1.4] text-ss-ink-soft mt-0.5 truncate">
-                      {concerns.length ? concerns.join(", ") : "Personalized routine"}
-                      {date && <span className="text-ss-ink-faint"> · {date}</span>}
+                    <span className="flex-1 min-w-0 block">
+                      <span className="block font-head font-semibold text-[16px] text-ss-ink tracking-[-0.01em]">
+                        Routine {num}
+                        <span className="font-body font-medium text-ss-accent-ink"> · {skinTypeLabel(q)}</span>
+                      </span>
+                      <span className="block text-[13px] leading-[1.4] text-ss-ink-soft mt-0.5 truncate">
+                        {concerns.length ? concerns.join(", ") : "Personalized routine"}
+                        {date && <span className="text-ss-ink-faint"> · {date}</span>}
+                      </span>
                     </span>
-                  </span>
-                  <span className="shrink-0 text-ss-ink-faint"><Arrow /></span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(q.id)}
-                  disabled={deletingId === q.id}
-                  aria-label={`Delete routine ${num}`}
-                  title="Delete routine"
-                  className="shrink-0 px-4 flex items-center justify-center border-l border-ss-hairline bg-transparent text-ss-ink-faint hover:text-caution-text hover:bg-caution-bg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {deletingId === q.id ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-ss-hairline border-t-caution-text animate-spin" />
+                    <span className="shrink-0 text-ss-ink-faint"><Arrow /></span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(q.id)}
+                    disabled={deletingId === q.id}
+                    aria-label={`Delete routine ${num}`}
+                    title="Delete routine"
+                    className="shrink-0 px-4 flex items-center justify-center border-l border-ss-hairline bg-transparent text-ss-ink-faint hover:text-caution-text hover:bg-caution-bg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingId === q.id ? (
+                      <span className="w-4 h-4 rounded-full border-2 border-ss-hairline border-t-caution-text animate-spin" />
+                    ) : (
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-2 px-[18px] py-[9px] border-t border-ss-hairline">
+                  {q.isMain ? (
+                    <span className="inline-flex items-center gap-[6px] font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-on-accent bg-ss-accent px-[9px] py-[3px] rounded-full">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2.5l2.1 5.1 5.4.5-4.1 3.6 1.2 5.3L12 19.8 7.4 22.5l1.2-5.3-4.1-3.6 5.4-.5z" />
+                      </svg>
+                      Main routine
+                    </span>
                   ) : (
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
+                    <span className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-ink-faint">
+                      Secondary routine
+                    </span>
                   )}
-                </button>
+                  {!q.isMain && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetMain(q.id)}
+                      disabled={settingMainId === q.id}
+                      className="font-mono text-[11.5px] text-ss-accent-ink underline underline-offset-2 bg-transparent border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {settingMainId === q.id ? "Setting…" : "Set as main"}
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}

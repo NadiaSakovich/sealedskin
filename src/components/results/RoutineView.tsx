@@ -64,7 +64,7 @@ export function RoutineView({ routine, onContinue, onBack }: { routine: Routine;
 
       <div className="flex items-center justify-between mt-6">
         <Button variant="ghost" onClick={onBack}><Arrow back /> Back</Button>
-        <Button onClick={onContinue}>Shop these products <Arrow /></Button>
+        <Button onClick={onContinue}>See recommended products <Arrow /></Button>
       </div>
     </div>
   );
