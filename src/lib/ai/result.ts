@@ -4,9 +4,15 @@ import type {
   Goal,
   Profile,
   Routine,
+  RoutineStep,
   ScoredActive,
 } from "@/types";
-import { recommendActives, buildRoutine } from "@/data/actives";
+import {
+  recommendActives,
+  buildRoutine,
+  capMinimalSteps,
+  MOISTURISING_SPF_STEP,
+} from "@/data/actives";
 import type { AiRoutineOutput } from "@/lib/domain/types";
 import type { GroundingInfo } from "./types";
 
@@ -50,6 +56,49 @@ const OIL_CLEANSER_RE = /\b(oil|balm|sherbet)\b|cleansing oil|cleansing balm|oil
 
 const OIL_CLEANSE_STEP = "Oil cleanser or balm";
 const WATER_CLEANSE_STEP = "Water-based cleanser";
+/** A minimal routine keeps one evening cleanse, so a lumped step collapses to this. */
+const SINGLE_CLEANSE_STEP = "Cleanser";
+
+/** Step types that read as the sunscreen step. Tested BEFORE the moisturiser test. */
+const SPF_STEP_RE = /sunscreen|spf|\bsun\b/i;
+/** Step types that read as a plain moisturiser (incl. night cream / gel-cream). */
+const MOISTURISER_STEP_RE = /moistur|night\s*cream|\bcream\b|\blotion\b/i;
+
+/**
+ * Hold an AI routine to the minimal shape: at most 3 steps per half of the day,
+ * with the morning ending on ONE moisturising sunscreen. Both rules are also in
+ * the prompts (`agent.ts` `MINIMAL_RULES`), but the model doesn't reliably comply
+ * — same lesson as the double-cleanse split — so this is the guarantee.
+ *
+ * Mutates `productsByType`: the combined step is re-keyed so the shop screen
+ * resolves it exactly rather than falling back to family matching.
+ */
+function applyMinimalShape(
+  routine: Routine,
+  productsByType: Record<string, ShopProduct[]>,
+): Routine {
+  const isSpf = (s: RoutineStep) => !!s.spf || SPF_STEP_RE.test(s.type);
+  const isMoisturiser = (s: RoutineStep) => !isSpf(s) && MOISTURISER_STEP_RE.test(s.type);
+
+  // Collapse the morning's moisturiser + sunscreen into one closing step. If the
+  // model skipped SPF entirely we still add it — sunscreen is never optional.
+  const spf = [...routine.am].reverse().find(isSpf);
+  const picks = spf ? productsByType[spf.type] ?? [] : [];
+  if (spf && spf.type !== MOISTURISING_SPF_STEP) delete productsByType[spf.type];
+  productsByType[MOISTURISING_SPF_STEP] = picks;
+
+  const am = [
+    ...routine.am.filter((s) => !isSpf(s) && !isMoisturiser(s)),
+    {
+      type: MOISTURISING_SPF_STEP,
+      active: spf?.active ?? "Broad-spectrum SPF 30–50",
+      note: "Hydrates and protects in one — never skip it",
+      spf: true as const,
+    },
+  ];
+
+  return { ...routine, am: capMinimalSteps(am), pm: capMinimalSteps(routine.pm) };
+}
 
 /** Adapt the grounded AI output onto the design view types. */
 export function buildAiResult(
@@ -87,6 +136,8 @@ export function buildAiResult(
     });
   }
 
+  const minimal = profile.commitment === "minimal";
+
   // The model sometimes emits a single "Double cleanse" step, then hangs a mix of
   // oil AND water cleansers off it — confusing on the shop page. Split any such
   // step into two explicit steps (oil/balm first, water-based second) and
@@ -107,6 +158,14 @@ export function buildAiResult(
     if (!DOUBLE_CLEANSE_RE.test(s.type)) return [base];
 
     const picks = productsByType[s.type] ?? [];
+    // Minimal routines keep a SINGLE evening cleanse, so collapse rather than
+    // split — preferring the water-based picks, which is what one cleanse means.
+    if (minimal) {
+      const water = picks.filter((p) => !OIL_CLEANSER_RE.test(p.name));
+      productsByType[SINGLE_CLEANSE_STEP] = water.length ? water : picks;
+      delete productsByType[s.type];
+      return [{ type: SINGLE_CLEANSE_STEP, active: null, note: "Remove the day gently" }];
+    }
     // Set both keys (even if empty) so the shop's tolerant matcher resolves each
     // split step exactly and never cross-fills one from the other.
     productsByType[OIL_CLEANSE_STEP] = picks.filter((p) => OIL_CLEANSER_RE.test(p.name));
@@ -118,11 +177,12 @@ export function buildAiResult(
     ];
   };
 
-  const routine: Routine = {
+  const built: Routine = {
     am: output.routine.am.flatMap(splitStep),
     pm: output.routine.pm.flatMap(splitStep),
     notes: output.routine.notes ?? [],
   };
+  const routine = minimal ? applyMinimalShape(built, productsByType) : built;
 
   return { source: "ai", analysis, profile, picked, routine, productsByType, grounding };
 }

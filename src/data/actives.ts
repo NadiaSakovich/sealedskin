@@ -93,6 +93,34 @@ export function recommendActives(profile: Profile, CONCERNS: Concern[], GOALS: G
   return top;
 }
 
+/**
+ * Shape rules for a "minimal" routine, shared by the local engine below and the
+ * AI path (`lib/ai/result.ts`) so both produce the same thing.
+ *
+ * A minimal routine is capped at {@link MINIMAL_MAX_STEPS} steps per half of the
+ * day, and the morning ends on ONE moisturising sunscreen: splitting moisturiser
+ * and SPF into separate steps is redundant when the point is fewer steps, but SPF
+ * itself is never dropped.
+ */
+export const MINIMAL_MAX_STEPS = 3;
+
+/** Step type for the combined moisturiser + SPF that closes a minimal morning. */
+export const MOISTURISING_SPF_STEP = "Moisturising sunscreen";
+
+/**
+ * Trim a routine to at most {@link MINIMAL_MAX_STEPS}, always keeping the first
+ * step (the cleanse) and the last (moisturise / protect) and dropping optional
+ * treatments from the middle.
+ */
+export function capMinimalSteps(steps: RoutineStep[]): RoutineStep[] {
+  if (steps.length <= MINIMAL_MAX_STEPS) return steps;
+  return [
+    steps[0],
+    ...steps.slice(1, -1).slice(0, MINIMAL_MAX_STEPS - 2),
+    steps[steps.length - 1],
+  ];
+}
+
 export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine {
   const ids = new Set(picked.map((p) => p.active.id));
   const lvl = profile.commitment || "balanced";
@@ -126,8 +154,14 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
     if (ids.has("ha")) amSerums.push({ type: "Hydrating serum", active: "Hyaluronic acid", note: "Plumps and preps for moisturiser" });
     amSerums.slice(0, full ? 3 : 1).forEach((s) => am.push(s));
   }
-  am.push({ type: moistAM, active: type === "dry" && ids.has("ceramides") ? "Ceramides" : null, note: "Locks in hydration" });
-  am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30–50", note: "Never skip — protects every result", spf: true });
+  // Minimal closes the morning with ONE moisturising sunscreen instead of a
+  // moisturiser step followed by an SPF step; everything else keeps them separate.
+  if (min) {
+    am.push({ type: MOISTURISING_SPF_STEP, active: "Broad-spectrum SPF 30–50", note: "Hydrates and protects in one — never skip it", spf: true });
+  } else {
+    am.push({ type: moistAM, active: type === "dry" && ids.has("ceramides") ? "Ceramides" : null, note: "Locks in hydration" });
+    am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30–50", note: "Never skip — protects every result", spf: true });
+  }
 
   const amHasSPF = am.some((s) => s.spf);
   if (amHasSPF && !min) {
@@ -163,6 +197,9 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
   if (sensitive) notes.push("Introduce one new active at a time and patch-test first — your skin reacts easily.");
   notes.push("Give any new routine 6–8 weeks of consistency before judging results.");
 
+  // A minimal routine promises "2–3 steps" — hold it to that in both halves of
+  // the day, even when several actives scored well.
+  if (min) return { am: capMinimalSteps(am), pm: capMinimalSteps(pm), notes };
   return { am, pm, notes };
 }
 

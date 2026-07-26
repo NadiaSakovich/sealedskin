@@ -123,6 +123,35 @@ provided schema.
 
 ${SAFETY_RULES}`;
 
+/**
+ * Extra rules appended to BOTH system prompts when the user picked the "minimal"
+ * commitment level. A minimal routine is capped at 3 steps per half of the day,
+ * and the morning ends on a single moisturising sunscreen — splitting moisturiser
+ * and SPF into two steps is redundant when the whole point is fewer steps, but SPF
+ * itself is non-negotiable. Enforced deterministically in `lib/ai/result.ts` too,
+ * since the model doesn't always comply.
+ */
+const MINIMAL_RULES = `
+
+Minimal routine — the user asked to keep it minimal. These rules OVERRIDE the \
+general guidance above:
+- The morning routine must have AT MOST 3 steps, and the evening routine AT MOST \
+3 steps. Fewer is fine; do not pad them to reach 3.
+- The LAST morning step must ALWAYS be a MOISTURISING SUNSCREEN: one product that \
+moisturises AND gives broad-spectrum SPF 30-50. Do NOT emit a separate moisturiser \
+step and a separate sunscreen step in the morning — for this user they are a single \
+step. Name that step exactly "Moisturising sunscreen".
+- Every product suggested for that step must genuinely be a hydrating/moisturising \
+SPF (an SPF fluid, lotion or moisturiser with SPF), not a bare sunscreen.
+- Keep the evening to a SINGLE cleanse — no double cleanse — so it fits in 3 steps.`;
+
+/** Did the user pick the "minimal" commitment level? (See COMMITMENT_LEVELS.) */
+function wantsMinimal(answers: QuizAnswer[]): boolean {
+  const a = answers.find((x) => x.questionId === "commitment");
+  const value = Array.isArray(a?.answer) ? a.answer.join(" ") : a?.answer ?? "";
+  return /minimal/i.test(value);
+}
+
 function formatAnswers(answers: QuizAnswer[]): string {
   return answers
     .map((a) => {
@@ -193,9 +222,12 @@ export async function buildRoutine(
   answers: QuizAnswer[],
 ): Promise<BuildRoutineResult> {
   const profile = formatAnswers(answers);
+  // Appended to both steps so the research gathers the right products AND the
+  // structuring step keeps the shape.
+  const minimalRules = wantsMinimal(answers) ? MINIMAL_RULES : "";
 
   const research: ChatMessage[] = [
-    { role: "system", content: RESEARCH_SYSTEM },
+    { role: "system", content: RESEARCH_SYSTEM + minimalRules },
     {
       role: "user",
       content: `Here is the user's profile and quiz answers:\n\n${profile}\n\nResearch and write their personalized skincare brief.`,
@@ -210,7 +242,7 @@ export async function buildRoutine(
   });
 
   const structure: ChatMessage[] = [
-    { role: "system", content: STRUCTURE_SYSTEM },
+    { role: "system", content: STRUCTURE_SYSTEM + minimalRules },
     {
       role: "user",
       content: `User profile (for reference):\n${profile}\n\nSkincare brief to structure:\n\n${brief.text}\n\nReturn JSON matching the schema.`,

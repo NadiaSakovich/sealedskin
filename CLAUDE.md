@@ -132,6 +132,35 @@ at night…") prepended to `routine.notes` — a minimal routine keeps a single 
 fills the gap. The card now renders whenever `notes.length > 0` (so the tip shows even if the AI
 returned no other notes).
 
+### The minimal-routine shape (a hard rule, both paths)
+
+A "minimal" commitment isn't just *fewer serums* — it has a fixed shape, applied to the AI and the
+offline routines alike:
+
+- **At most `MINIMAL_MAX_STEPS` (3) steps in AM and 3 in PM.**
+- **The morning ends on ONE combined `MOISTURISING_SPF_STEP`** ("Moisturising sunscreen"): splitting
+  moisturiser and SPF into two steps is redundant when the point is fewer steps, but SPF is never
+  dropped — so they merge rather than either one going.
+- **A single evening cleanse** (no double cleanse), which is what the "Good to know" tip above covers.
+
+Where it lives:
+- `data/actives.ts` exports the shared rules — `MINIMAL_MAX_STEPS`, `MOISTURISING_SPF_STEP`, and
+  `capMinimalSteps()` (trims to 3, always keeping the first step (cleanse) and last (moisturise /
+  protect), dropping optional middle treatments). The local `buildRoutine` emits the combined step
+  directly for minimal and caps both halves.
+- `lib/ai/agent.ts` — `MINIMAL_RULES` is appended to **both** system prompts when `wantsMinimal()`
+  sees the commitment answer, so the grounded research looks for hydrating SPFs and the structuring
+  step keeps the shape.
+- `lib/ai/result.ts` — `applyMinimalShape()` **enforces** it on the AI output: folds the moisturiser
+  and SPF steps into the combined one (re-keying `productsByType` so the shop resolves it exactly),
+  adds the SPF step if the model omitted it entirely, and caps both halves. `splitStep` also
+  *collapses* a lumped "Double cleanse" to a single `Cleanser` (preferring the water-based picks)
+  instead of splitting it in two, which is the opposite of the non-minimal behaviour.
+
+The prompt and the enforcement are both needed: the prompt gets the right *products* (hydrating SPFs
+rather than bare sunscreens, which the enforcement can't retrofit), the enforcement guarantees the
+*shape*. Same division of labour as the double-cleanse split.
+
 Note: the pregnancy question lives in `src/data/questions.ts` (id `pregnancy`) but is rendered
 in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregnancy) from
 `PREG_Q`. `analyzeSkin`/`buildProfile` still read it from the full `QS` list via `answers`.
@@ -544,6 +573,18 @@ Google Chrome** from a throwaway dir to keep project deps clean:
       straight into `sessionStorage` under `ss-edit-quiz` (the key `editSession.ts` uses) and load
       `/?edit=1`. The fixture must match `src/types.ts` `Analysis`/`Profile` exactly (`typeLabel`,
       not `label`), or the results screens throw. Only the actual save request needs a real account.
+23. **Minimal routine capped at 3 steps with a combined moisturising sunscreen (this session):**
+    - Added `MINIMAL_RULES` to both AI prompts and `applyMinimalShape()` enforcement, plus the same
+      shape in the local engine — see "The minimal-routine shape" above.
+    - Verified: **both models already obey the prompt** (3+3 steps, last AM step "Moisturising
+      sunscreen", 0 separate moisturiser steps), while *balanced* is unchanged (4+4, separate SPF,
+      PM double cleanse). The enforcement was then unit-tested against a deliberately non-compliant
+      response (5 AM / 4 PM with a lumped double cleanse): trimmed to 3+3 with the SPF picks carried
+      onto the combined step, and balanced left untouched. Live UI drive: minimal AM = Cleanser →
+      Targeted Serum → Moisturising sunscreen, PM = 3 steps, shop shows hydrating SPF fluids under
+      the combined step with no empty-step notes, 0 console errors.
+    - Handy: `npx --yes tsx <script>.mts` run from the repo root resolves the `@/*` alias, so
+      `lib/**` functions can be unit-tested directly without adding a test framework.
 
 ## Likely next steps
 
