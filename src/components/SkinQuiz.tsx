@@ -148,6 +148,11 @@ export default function SkinQuiz() {
   // In review mode: false = the landing hub (3 buttons); true = the user chose
   // "edit quiz" and is walking the quiz, so the finale shows rebuild/show.
   const [reviewEditing, setReviewEditing] = useState(false);
+  // How many times the routine has been (re)generated since this screen loaded.
+  // A model switch rebuilds the routine without touching the answers, so this is
+  // what tells us a *saved* routine now differs from its stored copy. Doubles as
+  // a reset key for the save panel, so each rebuild can be saved in turn.
+  const [rebuildCount, setRebuildCount] = useState(0);
 
   // Pick the intro hero on mount (client-only) so each visit can differ; the server
   // always renders index 0, so this avoids an SSR/CSR hydration mismatch.
@@ -321,6 +326,9 @@ export default function SkinQuiz() {
   async function startBuild(targetModel: string) {
     setBuilding(true);
     setAiError(null);
+    // Counts the fallback path too: on failure the stored result still changes
+    // (to a locally built routine), so it's just as much a new version.
+    setRebuildCount((c) => c + 1);
     const { analysis, profile } = buildProfile();
     try {
       const res = await fetch("/api/routine", {
@@ -376,6 +384,11 @@ export default function SkinQuiz() {
     editingId && editOriginal
       ? submissionChanged(editOriginal, { answers, concerns, topConcerns, commitment, region })
       : false;
+
+  // The other way a saved routine can drift from its stored copy: it was rebuilt
+  // (a model switch, or a rebuild from the finale) while the answers stayed the
+  // same. The result is a different routine, so it's offered for saving too.
+  const reviewRebuilt = !!editingId && rebuildCount > 0;
 
   const shellProps = {
     stageIndex,
@@ -690,12 +703,20 @@ export default function SkinQuiz() {
             regionLabel={profile.regionLabel}
             productsByType={result.productsByType}
             onBack={() => go(R_ROUTINE, "back")}
-            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); go(0, "back"); }}
-            // Fresh quiz → offer to save. Reviewing a saved routine → only offer to
-            // save when something actually changed (a pure review needs no save).
+            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); setRebuildCount(0); go(0, "back"); }}
+            // Fresh quiz → offer to save. Reviewing a saved routine → only offer
+            // to save when it actually differs from the stored copy: the answers
+            // changed, or the routine was rebuilt (e.g. with another model). A
+            // pure review needs no save. The key resets the panel after each
+            // rebuild so a second regeneration can be saved in turn.
             saveSlot={
-              !editingId || reviewChanged
-                ? <SaveRoutine payload={savePayload} editId={editingId ?? undefined} />
+              !editingId || reviewChanged || reviewRebuilt
+                ? <SaveRoutine
+                    key={`save-${editingId ?? "new"}-${editingId ? rebuildCount : 0}`}
+                    payload={savePayload}
+                    editId={editingId ?? undefined}
+                    rebuiltOnly={reviewRebuilt && !reviewChanged}
+                  />
                 : undefined
             }
           />

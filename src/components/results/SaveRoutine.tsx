@@ -16,12 +16,25 @@ type Status = "idle" | "saving" | "saved" | "error" | "limit";
  *
  * When `editId` is set (the user is editing a saved routine), it PUTs to update
  * that routine in place instead of creating a new one.
+ *
+ * `rebuiltOnly` distinguishes the two ways a saved routine can differ from its
+ * stored copy: edited answers, or the same answers regenerated (e.g. switched to
+ * another AI model). Only the wording changes — both PUT.
  */
-export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; editId?: string }) {
+export function SaveRoutine({
+  payload,
+  editId,
+  rebuiltOnly = false,
+}: {
+  payload: SaveQuizRequest;
+  editId?: string;
+  rebuiltOnly?: boolean;
+}) {
   const { user } = useAuth();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const editing = !!editId;
+  const regenerated = editing && rebuiltOnly;
 
   async function handleSave() {
     setStatus("saving");
@@ -86,9 +99,11 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
           {editing ? "Updated ✓" : "Saved ✓"}
         </p>
         <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mt-1 [text-wrap:pretty]">
-          {editing
-            ? "Your changes are saved to this routine. Find it any time in your account."
-            : "Your routine is saved to your account. Sign in again any time to pick it back up."}
+          {regenerated
+            ? "This routine now holds the version you just generated. Find it any time in your account."
+            : editing
+              ? "Your changes are saved to this routine. Find it any time in your account."
+              : "Your routine is saved to your account. Sign in again any time to pick it back up."}
         </p>
       </div>
     );
@@ -97,10 +112,12 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
   return (
     <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-surface px-[18px] py-[16px]">
       <p className="font-head font-semibold text-[16px] text-ss-ink m-0 mb-1">
-        {editing ? "Save your changes" : "Save your routine"}
+        {regenerated ? "Save this version" : editing ? "Save your changes" : "Save your routine"}
       </p>
       <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[14px] [text-wrap:pretty]">
-        {editing
+        {regenerated
+          ? "You just rebuilt this routine, so it differs from the saved copy. Update it to keep this version instead."
+          : editing
           ? "Update this routine in your account with the changes you just made."
           : user
             ? "Save this routine to your account and come back to it later."

@@ -55,7 +55,7 @@ The routine-building engine is an AI model, model-agnostic so the model can be s
   `{ text, grounding? }`), `ChatMessage`, `GroundingInfo`/`GroundingSource`. `GenerateOptions`
   carries `grounding?: boolean` and `thinkingBudget?: number`.
 - `src/lib/ai/providers/gemini.ts` — `GeminiProvider`, a thin REST wrapper (no SDK). Default model
-  `gemini-3.1-flash-lite`. `grounding: true` adds `tools: [{ google_search: {} }]` (model decides
+  `gemini-3.5-flash-lite`. `grounding: true` adds `tools: [{ google_search: {} }]` (model decides
   whether to search); `thinkingBudget` maps to `generationConfig.thinkingConfig.thinkingBudget`
   (0 disables thinking). `parseGrounding()` normalizes `groundingMetadata` → sources/chip/queries.
 - `src/lib/ai/index.ts` — `createProvider(modelOverride?)` factory reading env (`AI_PROVIDER`,
@@ -93,15 +93,15 @@ in one call** — with `google_search` on, the JSON gets corrupted (e.g. the arr
    Search Suggestions chip) are captured. Capped at `thinkingBudget: 512` — a small budget still
    triggers searches but is ~30% faster than uncapped thinking.
 2. **Structure → JSON.** A second, **non-grounded** `generate()` with `responseSchema` (the
-   `OUTPUT_SCHEMA` mirroring `AiRoutineOutput`) reshapes the brief into clean JSON, `thinkingBudget:
-   0` (mechanical, no reasoning needed). `parseRoutineJson()` strips code fences + tolerates stray
-   control chars via `sanitizeJson()`.
+   `OUTPUT_SCHEMA` mirroring `AiRoutineOutput`) reshapes the brief into clean JSON, with thinking as
+   low as the models allow (`MIN_THINKING_BUDGET = 1` — see the gotcha below; it used to be 0).
+   `parseRoutineJson()` strips code fences + tolerates stray control chars via `sanitizeJson()`.
 
 The grounding shown in the UI comes from step 1; the structured routine comes from step 2.
 
-**Latency/behaviour observed:** `gemini-3.1-flash-lite` (default) ≈10s but usually does NOT search
-(0 sources); `gemini-3.5-flash` ≈32–35s with the 512 cap and grounds richly (~14–23 sources +
-chip). Grounding is non-deterministic — the model decides per request. **Skin-type analysis stays
+**Latency/behaviour observed:** `gemini-3.5-flash-lite` (default) ≈11s and *does* ground (≈5 sources
++ chip — an improvement on the old `3.1-flash-lite`, which usually returned 0); `gemini-3.6-flash`
+≈18s with the 512 cap and grounds more richly (≈13 sources + chip). Grounding is non-deterministic — the model decides per request. **Skin-type analysis stays
 LOCAL** (`analyzeSkin`), since it's already shown mid-quiz in `AnalysisView`; the AI only produces
 ingredients, routine (am/pm/notes), and grounded product picks.
 
@@ -231,10 +231,21 @@ PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on 
   - `stage: "editing"` (set once the user enters quiz editing via any edit link) — the CTA is
     **Rebuild my routine** if answers changed, else **Show my routine** (shows the saved result, no
     AI rebuild).
-- **Change detection:** `submissionChanged(editOriginal, current)` in `SkinQuiz` (order-independent
-  for the concern arrays) drives both the rebuild-vs-show CTA and whether the Shop page offers to
-  save. A pure review (nothing changed) shows **no** "Save your changes" section; a fresh quiz always
-  shows "Save your routine".
+- **Change detection — two independent ways a saved routine can drift:**
+  1. **Answers changed** — `submissionChanged(editOriginal, current)` in `SkinQuiz`
+     (order-independent for the concern arrays). Also drives the finale's rebuild-vs-show CTA.
+  2. **Routine regenerated** — `rebuildCount > 0`, incremented by every `startBuild()`. A
+     **model switch** rebuilds the routine without touching a single answer, so the saved copy is
+     stale even though `submissionChanged` is false. Counts the AI-failure path too, since the stored
+     result still changes (to a locally built one).
+
+  The Shop page offers to save when `!editingId || reviewChanged || reviewRebuilt`. A pure review
+  (nothing changed, nothing rebuilt) shows **no** save section; a fresh quiz always shows "Save your
+  routine". Both saved-routine cases PUT (update in place) — only the wording differs, via
+  `SaveRoutine`'s `rebuiltOnly` prop: "Save this version / You just rebuilt this routine…" instead of
+  "Save your changes". `SaveRoutine` is **keyed by `rebuildCount`** while editing, so its internal
+  "Updated ✓" state resets on each rebuild and a second regeneration can be saved in turn.
+  `rebuildCount` resets on "Start over".
 - **`Shell` gains `onBackToProfile`** — while editing a saved routine (`editingId` set), every quiz
   and results screen shows a persistent "← Back to profile" link in the header band.
 - **Profile photo** uses a plain `<img>` (Google `lh3.googleusercontent.com` avatar, with an
@@ -315,6 +326,19 @@ pre-fix) picks until rebuilt.
   `responseModalities`), `x-goog-api-key: $GEMINI_API_KEY`, image bytes at
   `candidates[0].content.parts[].inline_data.data` (base64). Then `sips -Z 512` into `public/quiz/`.
 
+## Content-page imagery
+
+- `ui/PageBanner.tsx` — a **21:9** full-column banner (`next/image` `fill` + `object-cover`,
+  `priority`, rounded + hairline border) used by the two content routes. 21:9 was chosen so the
+  banner spans the 680px reading column but stays ~2.3× shorter than it is wide (≈680×291 rendered).
+- Images live in `public/pages/` — `how-it-works.jpg` (a woman smiling at her reflection in a bright
+  minimal bathroom — the quiz's woman, happy, in an interior) and `about-cosmetics.jpg` (unlabelled
+  bottles on a limestone ledge with eucalyptus and calendula petals; no brand names by design).
+  Both **Gemini-generated** (`gemini-3.1-flash-image`, `aspectRatio: "21:9"`), same sage/warm-cream
+  editorial look as `public/quiz/`, downscaled to 1360px wide (2× the column) JPEG ~130–140KB.
+- Placement: on `/how-it-works` between the intro paragraph and the numbered steps; on `/about`
+  between the intro paragraph and "What we believe".
+
 ## Conventions & gotchas
 
 - **Strict TS** — no unused locals/params; build fails otherwise.
@@ -334,7 +358,14 @@ pre-fix) picks until rebuilt.
   brands are examples, not endorsements; content is heuristic, not medical advice.
 - **Don't merge grounding + `responseSchema` into one Gemini call** — it corrupts the JSON (see
   "Two-step agent"). Keep grounded prose and JSON structuring as separate `generate()` calls.
-- **AI latency:** a grounded `gemini-3.5-flash` route is ~32–35s; mind serverless function
+- **`thinkingBudget: 0` is rejected by the current models.** `gemini-3.5-flash-lite` and
+  `gemini-3.6-flash` 400 (`INVALID_ARGUMENT`) on a thinking budget of exactly 0 — thinking can't be
+  switched off on them (older `3.1-flash-lite`/`3.5-flash` allowed it). Any budget ≥ 1, or `-1`
+  (dynamic), is fine; `agent.ts` uses `MIN_THINKING_BUDGET = 1` for the structuring step. Symptom if
+  this regresses: every routine silently falls back to the local logic, since `/api/routine` 500s.
+  `thinkingLevel` (`low`/`medium`/`high`) is NOT accepted on these models via v1beta — use the
+  numeric budget.
+- **AI latency:** a grounded `gemini-3.6-flash` route is ~18s; mind serverless function
   timeouts when deploying. Levers if needed: trim the brief, request fewer products, lower the
   research `thinkingBudget` further.
 - The two-step prompts/safety rules live in `agent.ts` (`SAFETY_RULES` is shared by both steps so
@@ -412,8 +443,9 @@ Google Chrome** from a throwaway dir to keep project deps clean:
       structuring) so we get BOTH live grounding and clean structured output.
     - `GeminiProvider.generate()` now returns `{ text, grounding? }`; added grounding tool wiring
       and `parseGrounding()` (sources + Search Suggestions chip + queries).
-    - Default model set to **`gemini-3.1-flash-lite`**; `ModelPicker` switches to `gemini-3.5-flash`
-      (the one that actually grounds). `/api/routine` allowlists both via `ALLOWED_MODELS`.
+    - Default model set to `gemini-3.1-flash-lite`; `ModelPicker` switched to `gemini-3.5-flash`
+      (the one that actually grounded). `/api/routine` allowlists both via `ALLOWED_MODELS`.
+      **(Both models were later replaced — see the routine-model upgrade below.)**
     - Added `thinkingBudget` support and **capped the research step at 512** (structuring at 0),
       cutting the grounded `3.5-flash` route from ~64s → ~32–35s with grounding intact.
     - `GroundingSources` renders the required source links + Search Suggestions chip.
@@ -491,21 +523,47 @@ Google Chrome** from a throwaway dir to keep project deps clean:
       path — the old 24-grid path rendered as a "tree branch").
     - Verified: `tsc`/ESLint clean; dev server hot-reloads clean. Signed-in account list still not
       clicked through E2E (needs real Google auth).
+22. **Content-page banners + routine-model upgrade (this session):**
+    - **Added banner imagery to `/how-it-works` and `/about`** via a new `ui/PageBanner` (21:9, full
+      reading-column width) — see "Content-page imagery". Options were generated and previewed first;
+      the picks were the bathroom-mirror shot and the limestone-ledge still life.
+    - **Upgraded the routine models:** `gemini-3.1-flash-lite` → **`gemini-3.5-flash-lite`** (default)
+      and `gemini-3.5-flash` → **`gemini-3.6-flash`**, across `gemini.ts` (provider default),
+      `ALLOWED_MODELS`, `ModelPicker`, `.env.example` and `.env.local`. Both IDs were confirmed
+      against the live `models` list first.
+    - **Fixed the 400 this exposed:** the new models reject `thinkingBudget: 0`, which the structuring
+      step used — so *every* routine 500'd and fell back to the local logic. Now
+      `MIN_THINKING_BUDGET = 1` (see the gotcha). Verified end-to-end through `POST /api/routine`:
+      3.5-flash-lite ≈11s / 5 sources / 24 picks, 3.6-flash ≈18s / 13 sources / 15 picks, both with
+      full ingredients + AM/PM routine and the Search Suggestions chip.
+    - **A regenerated saved routine can now be saved.** Switching model while reviewing a saved
+      routine rebuilds it but leaves the answers untouched, so the old answers-only change detection
+      hid the save panel. Added `rebuildCount` + `reviewRebuilt` and the `rebuiltOnly` wording — see
+      "Change detection" under the review hub.
+    - **E2E note:** the review hub *can* be driven without Google auth — seed the saved routine
+      straight into `sessionStorage` under `ss-edit-quiz` (the key `editSession.ts` uses) and load
+      `/?edit=1`. The fixture must match `src/types.ts` `Analysis`/`Profile` exactly (`typeLabel`,
+      not `label`), or the results screens throw. Only the actual save request needs a real account.
 
 ## Likely next steps
 
 - **Pick one model and remove the temporary `ModelPicker`** (the user plans to compare
-  `3.1-flash-lite` vs `3.5-flash`, then keep one and delete the switch).
+  `3.5-flash-lite` vs `3.6-flash`, then keep one and delete the switch).
 - Add an explicit **account-creation prompt** after results (the pieces exist — auth + `SaveRoutine`
   + the `/profile` page — but there's no dedicated "save & track vs. continue without an account"
   moment yet).
 - **E2E-test the signed-in flow** end-to-end (save a routine; open it → review hub → review / edit /
-  rebuild / show / update-in-place / delete / back-to-profile) — only the signed-out state has been
-  verified so far; the review-hub + save-gating logic is unit/type-checked but not clicked through.
+  rebuild / show / update-in-place / delete / back-to-profile). The review hub itself is now driven
+  in tests via the `ss-edit-quiz` sessionStorage seed (see the E2E note above), so what's left
+  unverified is specifically the **authenticated write path** — the POST/PUT/PATCH/DELETE round trips.
+- Consider having `POST /api/users` **return the new routine id** so `SaveRoutine` can hand it back to
+  `SkinQuiz` as `editingId`. Then a fresh quiz that's saved and then rebuilt (e.g. model switch) could
+  offer to *update* that routine instead of leaving a stale "Saved ✓" panel — today only *reopened*
+  saved routines get the regenerate-and-save treatment.
 - Consider giving saved routines **persisted, user-editable names** (currently the "Routine N" label
   is derived from list position, not stored). (A **delete** action now exists.)
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.
 - Optionally delete `design-incoming/` once no longer needed as reference.
-- Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.5-flash` path.
+- Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.6-flash` path.
 - Add a **`README.md`** (setup/run, required env vars) now that the repo is public; consider a
   deploy target (Vercel) and basic CI (`tsc --noEmit` + `next build`).

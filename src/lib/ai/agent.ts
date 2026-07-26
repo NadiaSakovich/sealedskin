@@ -1,6 +1,13 @@
 import type { ChatMessage, GroundingInfo, LLMProvider } from "./types";
 import type { AiRoutineOutput, QuizAnswer } from "@/lib/domain/types";
 
+/**
+ * Lowest thinking budget the current Gemini models accept. They reject a budget
+ * of 0 (400 INVALID_ARGUMENT) — thinking can't be disabled outright — so this is
+ * the "as good as off" setting for mechanical calls.
+ */
+const MIN_THINKING_BUDGET = 1;
+
 /** OpenAPI-subset schema mirroring {@link AiIngredient}. */
 const INGREDIENT_SCHEMA = {
   type: "object",
@@ -212,9 +219,11 @@ export async function buildRoutine(
   const structured = await provider.generate(structure, {
     temperature: 0.2,
     responseSchema: OUTPUT_SCHEMA as unknown as Record<string, unknown>,
-    // Structuring is mechanical — no deep reasoning needed; skip thinking so the
-    // second call is fast.
-    thinkingBudget: 0,
+    // Structuring is mechanical — no deep reasoning needed, so keep thinking as
+    // low as the model allows. NOT 0: gemini-3.5-flash-lite and gemini-3.6-flash
+    // reject `thinkingBudget: 0` with a 400 (thinking can't be switched off on
+    // them); 1 is the minimum they accept and is effectively the same thing.
+    thinkingBudget: MIN_THINKING_BUDGET,
   });
 
   try {

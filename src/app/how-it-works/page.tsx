@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
+import { PageBanner } from "@/components/ui/PageBanner";
 
 export const metadata: Metadata = {
   title: "How it works — SealedSkin",
@@ -41,6 +42,13 @@ export default function HowItWorksPage() {
         few honest questions; we analyze your skin and build a routine around what it actually
         needs.
       </p>
+
+      <div className="mb-9">
+        <PageBanner
+          src="/pages/how-it-works.jpg"
+          alt="A woman smiling at her reflection in a bright, minimal bathroom"
+        />
+      </div>
 
       <ol className="grid gap-3 list-none p-0 m-0">
         {STEPS.map((s, i) => (

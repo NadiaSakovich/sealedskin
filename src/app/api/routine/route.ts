@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  * Models the UI is allowed to request. Anything else falls back to the env /
  * provider default — the client can't make us call an arbitrary model.
  */
-const ALLOWED_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash"];
+const ALLOWED_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
 
 /**
  * POST /api/routine

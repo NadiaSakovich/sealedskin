@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
+import { PageBanner } from "@/components/ui/PageBanner";
 
 export const metadata: Metadata = {
   title: "About — SealedSkin",
@@ -24,6 +25,13 @@ export default function AboutPage() {
         is the opposite. We ask a few honest questions, read what your skin tells us, and hand back
         a routine you can actually keep up with.
       </p>
+
+      <div className="mt-9">
+        <PageBanner
+          src="/pages/about-cosmetics.jpg"
+          alt="Unlabelled skincare bottles on a stone ledge with a eucalyptus sprig"
+        />
+      </div>
 
       <h2 className={sectionH}>What we believe</h2>
       <p className={para}>

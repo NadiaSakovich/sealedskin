@@ -39,7 +39,7 @@ export class GeminiProvider implements LLMProvider {
       throw new Error("GeminiProvider: apiKey is required");
     }
     this.apiKey = config.apiKey;
-    this.model = config.model ?? "gemini-3.1-flash-lite";
+    this.model = config.model ?? "gemini-3.5-flash-lite";
   }
 
   async generate(

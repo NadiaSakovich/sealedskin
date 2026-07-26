@@ -5,8 +5,8 @@
 // model is chosen.
 
 export const AI_MODELS = [
-  { id: "gemini-3.1-flash-lite", label: "3.1 Flash-Lite" },
-  { id: "gemini-3.5-flash", label: "3.5 Flash" },
+  { id: "gemini-3.5-flash-lite", label: "3.5 Flash-Lite" },
+  { id: "gemini-3.6-flash", label: "3.6 Flash" },
 ];
 
 export const DEFAULT_AI_MODEL = AI_MODELS[0].id;
