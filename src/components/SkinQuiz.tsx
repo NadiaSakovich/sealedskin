@@ -657,7 +657,7 @@ export default function SkinQuiz() {
       <Shell {...shellProps}>
         <Screen screenKey="r-routine" dir={dir}>
           {resultsTopBar(result.source)}
-          <RoutineView routine={result.routine} onContinue={() => go(R_SHOP)} onBack={() => go(R_INGREDIENTS, "back")} />
+          <RoutineView routine={result.routine} minimal={commitment === "minimal"} onContinue={() => go(R_SHOP)} onBack={() => go(R_INGREDIENTS, "back")} />
           {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
       </Shell>

@@ -33,7 +33,23 @@ function RoutineBlock({ title, tag, steps }: { title: string; tag: string; steps
   );
 }
 
-export function RoutineView({ routine, onContinue, onBack }: { routine: Routine; onContinue: () => void; onBack: () => void }) {
+export function RoutineView({
+  routine,
+  onContinue,
+  onBack,
+  minimal = false,
+}: {
+  routine: Routine;
+  onContinue: () => void;
+  onBack: () => void;
+  /** A minimal routine skips the PM double cleanse — show a tip that it's worth it after SPF. */
+  minimal?: boolean;
+}) {
+  // A minimal routine keeps a single evening cleanse, so lead the "Good to know"
+  // notes with the double-cleanse-after-SPF tip.
+  const minimalCleanseTip =
+    "If you apply SPF in the morning, it’s worth double cleansing at night — first use an oil or balm cleanser to melt away sunscreen and grime, then your usual water-based cleanser.";
+  const notes = minimal ? [minimalCleanseTip, ...routine.notes] : routine.notes;
   return (
     <div className="py-0.5">
       <ResultsEyebrow step={3} />
@@ -48,11 +64,11 @@ export function RoutineView({ routine, onContinue, onBack }: { routine: Routine;
         <RoutineBlock title="Evening" tag="PM" steps={routine.pm} />
       </div>
 
-      {routine.notes.length > 0 && (
+      {notes.length > 0 && (
         <div className="mt-6 px-[18px] py-4 rounded-[14px] bg-ss-accent-tint border border-ss-accent">
           <div className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-accent-ink mb-[10px]">Good to know</div>
           <ul className="list-none m-0 p-0 grid gap-2">
-            {routine.notes.map((n, i) => (
+            {notes.map((n, i) => (
               <li key={i} className="flex gap-[9px] items-start">
                 <span className="shrink-0 mt-2 w-1 h-1 rounded-full bg-ss-accent" />
                 <span className="flex-1 block text-[13.5px] leading-[1.45] text-ss-ink">{n}</span>

@@ -28,8 +28,21 @@ function Logo({ size = 34 }: { size?: number }) {
 }
 
 function Brand({ size = 34 }: { size?: number }) {
+  const pathname = usePathname();
   return (
-    <Link href="/" className="flex items-center gap-[11px] no-underline" aria-label="SealedSkin home">
+    <Link
+      href="/"
+      className="flex items-center gap-[11px] no-underline"
+      aria-label="SealedSkin home"
+      onClick={(e) => {
+        // Already on the quiz route: a Link to "/" is a no-op and won't reset
+        // the step machine, so force a fresh load back to the landing.
+        if (pathname === "/") {
+          e.preventDefault();
+          window.location.assign("/");
+        }
+      }}
+    >
       <Logo size={size} />
       <span className="font-head font-semibold text-[18px] tracking-[-0.02em] text-ss-ink">SealedSkin</span>
     </Link>

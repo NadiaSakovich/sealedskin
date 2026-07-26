@@ -43,6 +43,15 @@ function skinTypeLabel(q: SavedQuiz): string {
   return q.result?.profile?.typeLabel ?? "Skin routine";
 }
 
+/** Commitment level as a short display label (Minimal / Balanced / Thorough). */
+function commitmentLabel(q: SavedQuiz): string | null {
+  const id = q.submission?.commitment;
+  if (id === "minimal") return "Minimal";
+  if (id === "balanced") return "Balanced";
+  if (id === "thorough") return "Thorough";
+  return null;
+}
+
 function Avatar({ photoURL, label }: { photoURL: string | null; label: string }) {
   const initial = (label.trim()[0] ?? "?").toUpperCase();
   if (photoURL) {
@@ -244,7 +253,7 @@ export function ProfileView() {
           </h2>
           {quizzes.length > 0 && (
             <span className="font-mono text-[12px] text-ss-ink-faint">
-              {quizzes.length} of {MAX_ROUTINES} saved
+              Up to {MAX_ROUTINES} saved routines
             </span>
           )}
         </div>
@@ -324,8 +333,10 @@ export function ProfileView() {
                     </span>
                     <span className="flex-1 min-w-0 block">
                       <span className="block font-head font-semibold text-[16px] text-ss-ink tracking-[-0.01em]">
-                        Routine {num}
-                        <span className="font-body font-medium text-ss-accent-ink"> · {skinTypeLabel(q)}</span>
+                        {skinTypeLabel(q)}
+                        {commitmentLabel(q) && (
+                          <span className="font-body font-medium text-ss-accent-ink"> · {commitmentLabel(q)}</span>
+                        )}
                       </span>
                       <span className="block text-[13px] leading-[1.4] text-ss-ink-soft mt-0.5 truncate">
                         {concerns.length ? concerns.join(", ") : "Personalized routine"}
@@ -356,8 +367,8 @@ export function ProfileView() {
                 <div className="flex items-center justify-between gap-2 px-[18px] py-[9px] border-t border-ss-hairline">
                   {q.isMain ? (
                     <span className="inline-flex items-center gap-[6px] font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-on-accent bg-ss-accent px-[9px] py-[3px] rounded-full">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 2.5l2.1 5.1 5.4.5-4.1 3.6 1.2 5.3L12 19.8 7.4 22.5l1.2-5.3-4.1-3.6 5.4-.5z" />
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                        <path d="M6 1l1.5 3.2 3.5.4-2.6 2.4.7 3.5L6 9.2 2.9 10.9l.7-3.5L1 5l3.5-.4z" />
                       </svg>
                       Main routine
                     </span>

@@ -12,11 +12,16 @@ function priceValue(price: string): number {
   return m ? parseFloat(m[0]) : Number.POSITIVE_INFINITY;
 }
 
-/** Budget/Mid/Premium label for a pick's price rank within its step's list. */
-function tierForRank(i: number, n: number): ShopProduct["tier"] {
-  if (n <= 1) return "Mid";
-  if (n === 2) return i === 0 ? "Budget" : "Premium";
-  return i === 0 ? "Budget" : i === n - 1 ? "Premium" : "Mid";
+/**
+ * Budget/Mid/Premium label from a pick's absolute price:
+ * up to $20 → Budget, up to $35 → Mid, anything pricier → Premium.
+ * Picks without a parseable price (priceValue → Infinity) read as Premium.
+ */
+function tierForPrice(price: string): ShopProduct["tier"] {
+  const v = priceValue(price);
+  if (v <= 20) return "Budget";
+  if (v <= 35) return "Mid";
+  return "Premium";
 }
 
 function ProductRow({ p }: { p: ShopProduct }) {
@@ -146,13 +151,12 @@ export function ShopView({
       seen.add(key);
       out.push(p);
     }
-    // Tiers must be monotonic in price — the source labels (AI- or catalog-assigned)
-    // can put a "Mid" above a "Premium". Sort the picks cheapest→priciest and
-    // relabel Budget/Mid/Premium by rank, so what the user sees always reads in
-    // ascending price. Picks without a parseable price sort last.
+    // Tiers come from ABSOLUTE price bands (≤$20 Budget, ≤$35 Mid, else Premium),
+    // not the source labels (which can put a "Mid" above a "Premium"). Sort the
+    // picks cheapest→priciest for display, then band each by its own price. Picks
+    // without a parseable price sort last and read as Premium.
     out.sort((a, b) => priceValue(a.price) - priceValue(b.price));
-    const n = out.length;
-    return out.map((p, i) => ({ ...p, tier: tierForRank(i, n) }));
+    return out.map((p) => ({ ...p, tier: tierForPrice(p.price) }));
   };
   return (
     <div className="py-0.5">

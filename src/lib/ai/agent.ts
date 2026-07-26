@@ -87,7 +87,10 @@ Write a thorough brief in PLAIN PROSE (do NOT use JSON or code blocks). Cover:
 1. Hero ingredients/actives to look for and why they suit THIS user.
 2. An ordered AM and PM routine (cleanser -> treatments -> moisturizer -> SPF in \
 the morning), sized to the user's commitment level (minimal = essentials only; \
-balanced = one targeted serum; thorough = layered), with a short note per step.
+balanced = one targeted serum; thorough = layered), with a short note per step. \
+If a double cleanse suits the PM routine, write it as TWO separate steps — an \
+oil/balm cleanser, then a water-based cleanser — never a single "double cleanse" \
+step, so each can have its own products.
 3. For each routine step, give EXACTLY THREE current example products available \
 in the user's region — ideally one Budget, one Mid, and one Premium; if you can't \
 find three distinct price tiers, still give three options (repeating a tier is \
@@ -105,8 +108,11 @@ const STRUCTURE_SYSTEM = `You convert a skincare brief into structured data.
 Use ONLY the information in the brief; do not invent new products. Include EVERY \
 product mentioned in the brief (the brief aims for three per routine step). For \
 each shop product, set "stepType" to EXACTLY match the "type" of the routine step \
-it belongs to, so it can be grouped under that step. Preserve the brief's safety guidance in \
-the routine notes. Output ONLY data matching the provided schema.
+it belongs to, so it can be grouped under that step. If the brief describes a \
+double cleanse, emit it as two separate routine steps (an oil/balm cleanser then \
+a water-based cleanser), never a single "double cleanse" step. Preserve the \
+brief's safety guidance in the routine notes. Output ONLY data matching the \
+provided schema.
 
 ${SAFETY_RULES}`;
 

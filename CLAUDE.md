@@ -126,6 +126,12 @@ user can compare; to be removed once one model is chosen.
    review hub").
 5. **Results:** Needs summary → Ingredients → AM/PM Routine → Shop.
 
+`RoutineView` takes a `minimal` prop (`commitment === "minimal"`). When set, its **"Good to know"**
+card leads with a double-cleanse tip ("If you apply SPF in the morning, it's worth double cleansing
+at night…") prepended to `routine.notes` — a minimal routine keeps a single evening cleanse, so this
+fills the gap. The card now renders whenever `notes.length > 0` (so the tip shows even if the AI
+returned no other notes).
+
 Note: the pregnancy question lives in `src/data/questions.ts` (id `pregnancy`) but is rendered
 in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregnancy) from
 `PREG_Q`. `analyzeSkin`/`buildProfile` still read it from the full `QS` list via `answers`.
@@ -153,9 +159,13 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
 
 ## Site header & nav
 
-- `components/layout/SiteHeader.tsx` — brand links to `/`; nav items are `next/link`s to
-  `/how-it-works` and `/about` with active-state styling (via `usePathname()`). (The old
-  "Ingredients" nav item was removed.) Hosts `ThemeToggle` + `AccountControl`.
+- `components/layout/SiteHeader.tsx` — the brand (logo + "SealedSkin" word) links to `/`; nav items
+  are `next/link`s to `/how-it-works` and `/about` with active-state styling (via `usePathname()`).
+  (The old "Ingredients" nav item was removed.) Hosts `ThemeToggle` + `AccountControl`. **Brand click
+  on the home route resets the quiz:** `/` *is* the quiz step machine, so a plain `Link` to `/` while
+  already there is a no-op; `Brand` special-cases `pathname === "/"` to `preventDefault()` +
+  `window.location.assign("/")`, forcing a fresh load back to the landing/start (from other routes it
+  navigates normally via the SPA).
 - The quiz uses `Shell` (header + progress rail); content routes use `ContentShell` (header only).
 - `AccountControl`'s signed-in dropdown has a **"Your profile"** `next/link` (→ `/profile`) above
   "Sign out".
@@ -175,16 +185,23 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
   access).
 - **Max 3 routines + one "main" (`isMain`):** an account may keep **at most 3** saved routines.
   `POST` enforces this server-side — a 4th returns **HTTP 409** with a friendly message; `SaveRoutine`
-  special-cases 409 into a "you've reached 3 saved routines — delete one" panel (with a link to the
-  account) rather than a generic error. Editing (`PUT`) is exempt. Exactly one routine is **main**:
+  special-cases 409 into a "you've reached 3 saved routines" panel (with a link to the account) that
+  offers **both** ways forward — *delete one to free a slot, or update an existing routine instead*
+  (since after deleting there's no automatic route back to the unsaved routine) — rather than a
+  generic error. Editing (`PUT`) is exempt. Exactly one routine is **main**:
   the **first** save becomes main; `PATCH` promotes any other (only one main at a time); deleting the
   main **auto-promotes the newest remaining**; `GET` treats the newest as main if none is flagged
-  (legacy saves). `ProfileView` shows a **"Main routine"** badge (accent border) on the main and a
-  **"Set as main"** action on the others, plus a "N of 3 saved" count and an at-limit note.
-- **List:** routines render as cards labeled **"Routine N · {skin type}"** (N from list position so
-  "Routine 1" is the oldest; newest gets the highest number) with top concerns + save date, a
-  **delete** action (`handleDelete` → `DELETE /api/users`), and a footer showing the **main-routine
-  badge** or a **"Set as main"** button (`handleSetMain` → `PATCH /api/users`). Clicking a card
+  (legacy saves). `ProfileView` shows a **"Main routine"** badge (accent border + a filled star
+  icon — the star reuses `Chips.tsx`'s proven `0 0 12 12` path, not a hand-rolled 24-grid one) on
+  the main and a **"Set as main"** action on the others, plus an **"Up to 3 saved routines"** note
+  (static, not a live "N of 3" count) and an at-limit note.
+- **List:** routines render as cards **titled by skin type** with the **commitment level**
+  (Minimal/Balanced/Thorough, via `commitmentLabel()` from `submission.commitment`) as the accent
+  detail — e.g. **"Combination skin · Balanced"** (NOT "Routine N"; the small numbered circle badge
+  is still list position). Older saves with no stored commitment show the skin type alone. Cards
+  also show top concerns + save date, a **delete** action (`handleDelete` → `DELETE /api/users`),
+  and a footer showing the **main-routine badge** or a **"Set as main"** button (`handleSetMain` →
+  `PATCH /api/users`). Clicking a card
   **opens it back in the quiz** for review/edit (`handleOpen` → `stashEditQuiz` +
   `router.push("/?edit=1")`); there is no longer a separate read-only detail component (the old
   `SavedRoutineDetail.tsx` was removed; the `SavedResult` type now lives in
@@ -251,14 +268,23 @@ a hardcoded list. The flow (`components/results/ShopView.tsx`):
   ("cleansing"/"wash"/"cleansing oil", "sun cream"/"spf"/standalone "sun").
 - **No silent omission:** if a step truly has no picks, `ShopStep` still renders the step header with
   a plain note rather than disappearing, so the Shop page always mirrors the routine.
+- **Double cleanse is always two steps.** The AI sometimes emits a single "Double cleanse" step and
+  hangs a MIX of oil + water cleansers off it (confusing on the shop page). `buildAiResult`
+  (`result.ts`) detects any step whose type matches `/double\s*cleans/i` and splits it into two —
+  **"Oil cleanser or balm"** + **"Water-based cleanser"** — then partitions that step's grounded
+  products between them by name (`OIL_CLEANSER_RE` → oil/balm step, the rest → water step), setting
+  BOTH new `productsByType` keys (even if empty) so the shop's tolerant matcher resolves each split
+  step exactly and never cross-fills. Both AI prompts (`agent.ts`) also ask for two separate cleanse
+  steps, but the `buildAiResult` split is the guarantee. The local `buildRoutine` already split the
+  PM double cleanse into two steps.
 - The intro copy says "**A few** picks at different budgets per step" (not "Three") since live counts
   depend on what grounding returns.
-- **Tiers are derived from price (monotonic).** The source tier labels — whether AI-assigned or from
-  the static catalog — can put a "Mid" above a "Premium". So `ShopView.resolve` **relabels**: after
-  collecting a step's ≤3 picks it sorts them cheapest→priciest (`priceValue` parses `$/£/€`, commas,
-  and ranges → first number; unparseable sorts last) and assigns Budget/Mid/Premium by **rank**
-  (`tierForRank`: 3 picks → Budget/Mid/Premium, 2 → Budget/Premium, 1 → Mid). This guarantees
-  Budget ≤ Mid ≤ Premium for **both** the live AI picks and the offline catalog.
+- **Tiers come from absolute price bands.** The source tier labels — whether AI-assigned or from the
+  static catalog — are unreliable (a "Mid" can cost more than a "Premium"). So `ShopView.resolve`
+  **relabels** by price: `tierForPrice(price)` assigns **Budget ≤ $20**, **Mid ≤ $35**, **Premium**
+  above (unparseable prices read as Premium). `priceValue` parses `$/£/€`, commas, and ranges → first
+  number. Picks are still sorted cheapest→priciest for display order, but each pick's tier is its own
+  band, so labels are consistent across steps for **both** the live AI picks and the offline catalog.
 - **Labels:** the routine screen CTA reads "**See recommended products**" (`RoutineView`), and the
   shop screen heading is "**Products for your routine**" (`ShopView`).
 - `products.ts` catalog depth: every **common** routine slot has ≥3 options per major region
@@ -445,6 +471,26 @@ Google Chrome** from a throwaway dir to keep project deps clean:
       monotonic on a **live AI** result, and the account eyebrow renamed — 0 console errors. The
       **signed-in** main/limit paths are type/lint-checked but not clicked through (need real Google
       auth).
+21. **Header reset, absolute price tiers, double-cleanse split, minimal tip & account tweaks (this
+    session):**
+    - **Clickable brand resets the quiz:** `SiteHeader.Brand` now force-reloads `/` when already on
+      the home route (the quiz), so the logo/word takes you back to the start mid-quiz (see "Site
+      header & nav"). Content-page navigation is unchanged (SPA `Link`).
+    - **Product tiers by absolute price band:** `ShopView` replaced rank-based `tierForRank` with
+      `tierForPrice` — **Budget ≤ $20, Mid ≤ $35, else Premium** (see "Shop product sourcing").
+    - **Save-limit copy** rephrased: the 409 panel now offers *delete one OR update an existing
+      routine* (there's no auto-route back to the unsaved routine after deleting).
+    - **Double cleanse always splits into two steps:** `buildAiResult` splits a lumped AI "Double
+      cleanse" step into oil + water steps and partitions its products; both AI prompts nudge the
+      same (see "Double cleanse is always two steps").
+    - **Minimal-routine tip** now leads the **"Good to know"** card in `RoutineView` (was a separate
+      tile), with the SPF/double-cleanse guidance.
+    - **Account page:** count reads **"Up to 3 saved routines"** (was "N of 3 saved"); cards are
+      **titled by skin type** with the **commitment label** (Minimal/Balanced/Thorough) as the accent
+      (was "Routine N · {skin type}"); the **"Main routine" star** icon was fixed (reuses `Chips.tsx`'s
+      path — the old 24-grid path rendered as a "tree branch").
+    - Verified: `tsc`/ESLint clean; dev server hot-reloads clean. Signed-in account list still not
+      clicked through E2E (needs real Google auth).
 
 ## Likely next steps
 

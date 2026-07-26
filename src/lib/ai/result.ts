@@ -43,6 +43,14 @@ function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
+/** A step is a lumped "double cleanse" if its type says so. */
+const DOUBLE_CLEANSE_RE = /double\s*cleans/i;
+/** Product names that read as an oil/balm (first) cleanser rather than a water-based one. */
+const OIL_CLEANSER_RE = /\b(oil|balm|sherbet)\b|cleansing oil|cleansing balm|oil[- ]?to[- ]?foam/i;
+
+const OIL_CLEANSE_STEP = "Oil cleanser or balm";
+const WATER_CLEANSE_STEP = "Water-based cleanser";
+
 /** Adapt the grounded AI output onto the design view types. */
 export function buildAiResult(
   output: AiRoutineOutput,
@@ -67,22 +75,7 @@ export function buildAiResult(
     reasons: ing.reasons ?? [],
   }));
 
-  const routine: Routine = {
-    am: output.routine.am.map((s) => ({
-      type: s.type,
-      active: s.active ?? null,
-      note: s.note,
-      ...(s.spf ? { spf: true } : {}),
-    })),
-    pm: output.routine.pm.map((s) => ({
-      type: s.type,
-      active: s.active ?? null,
-      note: s.note,
-      ...(s.spf ? { spf: true } : {}),
-    })),
-    notes: output.routine.notes ?? [],
-  };
-
+  // Grounded products keyed by the exact step type the model assigned them.
   const productsByType: Record<string, ShopProduct[]> = {};
   for (const p of output.products ?? []) {
     (productsByType[p.stepType] ??= []).push({
@@ -93,6 +86,43 @@ export function buildAiResult(
       ...(p.url ? { url: p.url } : {}),
     });
   }
+
+  // The model sometimes emits a single "Double cleanse" step, then hangs a mix of
+  // oil AND water cleansers off it — confusing on the shop page. Split any such
+  // step into two explicit steps (oil/balm first, water-based second) and
+  // partition that step's products between them by name, so each step shows only
+  // the cleansers that belong to it.
+  const splitStep = (s: {
+    type: string;
+    active: string | null | undefined;
+    note: string;
+    spf?: boolean;
+  }): Routine["am"] => {
+    const base = {
+      type: s.type,
+      active: s.active ?? null,
+      note: s.note,
+      ...(s.spf ? { spf: true as const } : {}),
+    };
+    if (!DOUBLE_CLEANSE_RE.test(s.type)) return [base];
+
+    const picks = productsByType[s.type] ?? [];
+    // Set both keys (even if empty) so the shop's tolerant matcher resolves each
+    // split step exactly and never cross-fills one from the other.
+    productsByType[OIL_CLEANSE_STEP] = picks.filter((p) => OIL_CLEANSER_RE.test(p.name));
+    productsByType[WATER_CLEANSE_STEP] = picks.filter((p) => !OIL_CLEANSER_RE.test(p.name));
+    delete productsByType[s.type];
+    return [
+      { type: OIL_CLEANSE_STEP, active: null, note: "First cleanse — melts away SPF, makeup and the day's grime" },
+      { type: WATER_CLEANSE_STEP, active: null, note: "Second cleanse — washes the skin underneath" },
+    ];
+  };
+
+  const routine: Routine = {
+    am: output.routine.am.flatMap(splitStep),
+    pm: output.routine.pm.flatMap(splitStep),
+    notes: output.routine.notes ?? [],
+  };
 
   return { source: "ai", analysis, profile, picked, routine, productsByType, grounding };
 }

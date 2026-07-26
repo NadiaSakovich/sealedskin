@@ -66,8 +66,8 @@ export function SaveRoutine({ payload, editId }: { payload: SaveQuizRequest; edi
           You&rsquo;ve reached 3 saved routines
         </p>
         <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[14px] [text-wrap:pretty]">
-          An account can keep up to 3 saved routines. To save this one, delete a routine you no
-          longer need from your account, then save again.
+          An account can keep up to 3 saved routines. In your account you can delete one to free up
+          a slot for a new routine, or update one of your existing routines instead.
         </p>
         <Link
           href="/profile"
