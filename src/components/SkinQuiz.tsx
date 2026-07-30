@@ -153,6 +153,10 @@ export default function SkinQuiz() {
   // what tells us a *saved* routine now differs from its stored copy. Doubles as
   // a reset key for the save panel, so each rebuild can be saved in turn.
   const [rebuildCount, setRebuildCount] = useState(0);
+  // What was last successfully saved from this screen. The save panel lives on
+  // the shop step, so leaving it (Back to the routine screen) and coming back
+  // remounts it — without this it would forget the save and offer it again.
+  const [savedMark, setSavedMark] = useState<{ rebuildCount: number; submission: QuizSubmission } | null>(null);
 
   // Pick the intro hero on mount (client-only) so each visit can differ; the server
   // always renders index 0, so this avoids an SSR/CSR hydration mismatch.
@@ -378,17 +382,25 @@ export default function SkinQuiz() {
     </div>
   );
 
+  const currentSubmission: QuizSubmission = { answers, concerns, topConcerns, commitment, region };
+
   // Have the answers drifted from the saved routine we opened? Drives both the
   // finale "rebuild vs show" CTA and whether the shop page offers to save changes.
   const reviewChanged =
-    editingId && editOriginal
-      ? submissionChanged(editOriginal, { answers, concerns, topConcerns, commitment, region })
-      : false;
+    editingId && editOriginal ? submissionChanged(editOriginal, currentSubmission) : false;
 
   // The other way a saved routine can drift from its stored copy: it was rebuilt
   // (a model switch, or a rebuild from the finale) while the answers stayed the
   // same. The result is a different routine, so it's offered for saving too.
   const reviewRebuilt = !!editingId && rebuildCount > 0;
+
+  // Is what's on screen exactly what we last saved? Same routine version (no
+  // rebuild since) and the same answers. If so the save panel shows its
+  // confirmation instead of offering the save again, even after remounting.
+  const alreadySaved =
+    !!savedMark &&
+    savedMark.rebuildCount === rebuildCount &&
+    !submissionChanged(savedMark.submission, currentSubmission);
 
   const shellProps = {
     stageIndex,
@@ -682,7 +694,7 @@ export default function SkinQuiz() {
     const result = getResult();
     const { analysis, profile, routine } = result;
     const savePayload: SaveQuizRequest = {
-      submission: { answers, concerns, topConcerns, commitment, region },
+      submission: currentSubmission,
       result: {
         source: result.source,
         profile,
@@ -703,12 +715,14 @@ export default function SkinQuiz() {
             regionLabel={profile.regionLabel}
             productsByType={result.productsByType}
             onBack={() => go(R_ROUTINE, "back")}
-            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); setRebuildCount(0); go(0, "back"); }}
+            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); setRebuildCount(0); setSavedMark(null); go(0, "back"); }}
             // Fresh quiz → offer to save. Reviewing a saved routine → only offer
             // to save when it actually differs from the stored copy: the answers
             // changed, or the routine was rebuilt (e.g. with another model). A
             // pure review needs no save. The key resets the panel after each
-            // rebuild so a second regeneration can be saved in turn.
+            // rebuild so a second regeneration can be saved in turn; `saved`
+            // keeps the confirmation after leaving and re-entering this screen,
+            // so an already-saved version is never offered for saving twice.
             saveSlot={
               !editingId || reviewChanged || reviewRebuilt
                 ? <SaveRoutine
@@ -716,6 +730,8 @@ export default function SkinQuiz() {
                     payload={savePayload}
                     editId={editingId ?? undefined}
                     rebuiltOnly={reviewRebuilt && !reviewChanged}
+                    saved={alreadySaved}
+                    onSaved={() => setSavedMark({ rebuildCount, submission: currentSubmission })}
                   />
                 : undefined
             }

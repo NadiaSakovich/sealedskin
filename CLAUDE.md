@@ -275,6 +275,14 @@ PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on 
   "Save your changes". `SaveRoutine` is **keyed by `rebuildCount`** while editing, so its internal
   "Updated ✓" state resets on each rebuild and a second regeneration can be saved in turn.
   `rebuildCount` resets on "Start over".
+- **The save confirmation survives leaving the shop screen.** "Updated ✓" used to be purely internal
+  to `SaveRoutine`, so stepping Back to the routine screen and returning via "See recommended
+  products" remounted it in `idle` and re-offered "Update my routine" for an already-saved version.
+  `SkinQuiz` now remembers what was saved (`savedMark = { rebuildCount, submission }`, set from
+  `SaveRoutine`'s `onSaved`) and passes `saved={alreadySaved}` — true only while neither a rebuild
+  nor an answer change has happened since. The panel keeps showing the confirmation instead; a
+  further rebuild or edit flips it back to offering the save. Cleared on "Start over". Same guard
+  applies to a fresh quiz, so a saved routine isn't POSTed twice by walking back and forth.
 - **`Shell` gains `onBackToProfile`** — while editing a saved routine (`editingId` set), every quiz
   and results screen shows a persistent "← Back to profile" link in the header band.
 - **Profile photo** uses a plain `<img>` (Google `lh3.googleusercontent.com` avatar, with an

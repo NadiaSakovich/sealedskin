@@ -20,18 +20,26 @@ type Status = "idle" | "saving" | "saved" | "error" | "limit";
  * `rebuiltOnly` distinguishes the two ways a saved routine can differ from its
  * stored copy: edited answers, or the same answers regenerated (e.g. switched to
  * another AI model). Only the wording changes — both PUT.
+ *
+ * `saved` says this exact version is already stored (the parent remembers it, so
+ * the confirmation survives leaving and re-entering the shop screen); `onSaved`
+ * reports a successful save back up so the parent can remember it.
  */
 export function SaveRoutine({
   payload,
   editId,
   rebuiltOnly = false,
+  saved = false,
+  onSaved,
 }: {
   payload: SaveQuizRequest;
   editId?: string;
   rebuiltOnly?: boolean;
+  saved?: boolean;
+  onSaved?: () => void;
 }) {
   const { user } = useAuth();
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>(saved ? "saved" : "idle");
   const [error, setError] = useState<string | null>(null);
   const editing = !!editId;
   const regenerated = editing && rebuiltOnly;
@@ -61,6 +69,7 @@ export function SaveRoutine({
         throw new Error(data.error ?? `Save failed (${res.status})`);
       }
       setStatus("saved");
+      onSaved?.();
     } catch (err) {
       // User dismissed the Google popup — not an error, just reset.
       if ((err as { code?: string }).code === POPUP_CLOSED) {
@@ -92,7 +101,7 @@ export function SaveRoutine({
     );
   }
 
-  if (status === "saved") {
+  if (status === "saved" || saved) {
     return (
       <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-accent-tint px-[18px] py-[15px] text-center">
         <p className="font-head font-semibold text-[16px] text-ss-accent-ink m-0">
