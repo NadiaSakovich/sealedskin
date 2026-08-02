@@ -15,6 +15,12 @@
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
+  "comments": {
+    "overrides.jose": "firebase-admin -> jwks-rsa does a CommonJS require('jose'), but jose 6 is ESM-only. Vercel's serverless bundle loads firebase-admin as an external via native require, so that combination throws ERR_REQUIRE_ESM at import time and every /api/users request 500s. jose 5 ships a CJS entry point and exposes the same four APIs jwks-rsa uses (importJWK, exportSPKI, decodeJwt, decodeProtectedHeader). Drop this override once jwks-rsa switches to a dynamic import()."
+  },
+  "overrides": {
+    "jose": "^5.10.0"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
