@@ -7,6 +7,14 @@ import type { QuizAnswer } from "@/lib/domain/types";
 // Node runtime (longer timeouts, full fetch), not the edge runtime.
 export const runtime = "nodejs";
 
+// The two-step grounded pipeline takes ~11s (3.5-flash-lite) to ~18s (3.6-flash),
+// so this route needs a much longer budget than a normal request. Pinned
+// explicitly rather than relying on the host's default, which has changed
+// before; 60s leaves headroom without letting a wedged call hang for minutes.
+// If this is ever too low the symptom is silent: the fetch fails and the quiz
+// falls back to the local routine logic.
+export const maxDuration = 60;
+
 /**
  * Models the UI is allowed to request. Anything else falls back to the env /
  * provider default — the client can't make us call an arbitrary model.
