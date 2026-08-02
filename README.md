@@ -123,6 +123,55 @@ serve the route correctly. Verify anything touching `firebase-admin`, `jose`, or
 externals config on a preview deployment. Remove the override once `jwks-rsa` switches
 to a dynamic `import()`.
 
+## Logging
+
+Server-side events are logged as structured JSON to **both** the console (so
+Vercel's own runtime logs are unchanged) and **Better Stack**, via
+`src/lib/logger.ts`. Without `BETTER_STACK_SOURCE_TOKEN` the logger silently
+degrades to console-only, so local development needs no setup.
+
+Vercel's Log Drains would be the other way to do this, but drains are a Pro-plan
+feature — shipping from the application works on Hobby.
+
+**Every line is attributable to a user.** `userId` is the Firebase uid when the
+request carried a verified token, and the browser's anonymous id otherwise:
+
+```jsonc
+{ "userId": "anon_7f3a91c2", "sessionId": "anon_7f3a91c2", "signedIn": false,
+  "model": "gemini:gemini-3.5-flash-lite", "durationMs": 11312 }
+
+{ "userId": "kR2f…", "sessionId": "anon_7f3a91c2", "email": "you@example.com",
+  "signedIn": true, "quizId": "abc123" }
+```
+
+The anonymous id (`src/lib/anonId.ts`) is a `localStorage` value sent in the
+`x-anon-id` header. It keeps travelling as `sessionId` after sign-in, so one
+person can be followed from their first anonymous quiz to their saved routines.
+It is a log grouping key only — client-generated, never an authorisation signal,
+and format-checked server-side so it can't inject arbitrary text into the logs.
+
+`/api/routine` stays open to signed-out users but will *verify* an
+`Authorization` header when one is present, purely so the log line carries a real
+uid and email rather than a spoofable client claim. A missing or bad token
+degrades to anonymous — it never rejects the request.
+
+Notable events: `routine.start` / `.success` / `.failed`, `users.save` /
+`.update` / `.delete` / `.setMain` / `.list` (+ `.failed` variants),
+`users.unauthorized`, `users.save.limitReached`, `client.signin.failed`.
+
+`routine.failed` is logged at `error` even though the user sees no error — the
+quiz soft-falls back to the offline routine, so the logs are the only place that
+failure is visible.
+
+**Serverless caveat:** a function can freeze the moment it responds, discarding
+buffered logs. Every handler therefore awaits `flushLogs()` before returning.
+
+**`/api/log`** forwards browser-side failures (which otherwise never reach a
+server). It is necessarily unauthenticated — sign-in failures happen when there
+is no session — so it accepts only an allowlist of event names with truncated
+messages and always answers 204. Delete the route and `src/lib/clientLog.ts` to
+drop client reporting entirely.
+
 ## Notes for contributors
 
 - Strict TypeScript: unused locals and params fail the build.

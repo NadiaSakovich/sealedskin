@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "../ui/Button";
 import { useAuth } from "../../lib/firebase/useAuth";
 import { signInWithGoogle, signOutUser, POPUP_CLOSED } from "../../lib/firebase/client";
+import { reportClientError } from "../../lib/clientLog";
 
 /**
  * Header account control.
@@ -41,9 +42,12 @@ export function AccountControl({ full = false }: { full?: boolean }) {
     try {
       await signInWithGoogle();
     } catch (err) {
-      // Ignore the user closing the popup; surface anything else to the console.
+      // Ignore the user closing the popup; surface anything else to the console
+      // and forward it, so sign-in failures are visible outside the user's own
+      // devtools.
       if ((err as { code?: string }).code !== POPUP_CLOSED) {
         console.error("Google sign-in failed", err);
+        reportClientError("client.signin.failed", err);
       }
     } finally {
       setBusy(false);

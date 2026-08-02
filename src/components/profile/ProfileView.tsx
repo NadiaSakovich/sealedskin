@@ -7,6 +7,8 @@ import { useAuth } from "../../lib/firebase/useAuth";
 import { getCurrentIdToken, signInWithGoogle, POPUP_CLOSED } from "../../lib/firebase/client";
 import type { QuizSubmission } from "../../lib/domain/types";
 import { stashEditQuiz } from "../../lib/editSession";
+import { anonHeaders } from "../../lib/anonId";
+import { reportClientError } from "../../lib/clientLog";
 import { Button } from "../ui/Button";
 import { Arrow } from "../ui/Arrow";
 import type { SavedResult } from "./types";
@@ -94,7 +96,9 @@ export function ProfileView() {
       }
       setState("loading");
       setError(null);
-      const res = await fetch("/api/users", { headers: { Authorization: `Bearer ${idToken}` } });
+      const res = await fetch("/api/users", {
+        headers: { Authorization: `Bearer ${idToken}`, ...anonHeaders() },
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `Failed to load (${res.status})`);
@@ -124,6 +128,7 @@ export function ProfileView() {
     } catch (err) {
       if ((err as { code?: string }).code !== POPUP_CLOSED) {
         console.error("Google sign-in failed", err);
+        reportClientError("client.signin.failed", err);
       }
     } finally {
       setSigningIn(false);
@@ -149,7 +154,7 @@ export function ProfileView() {
       if (!idToken) throw new Error("Please sign in again");
       const res = await fetch(`/api/users?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${idToken}` },
+        headers: { Authorization: `Bearer ${idToken}`, ...anonHeaders() },
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -181,7 +186,11 @@ export function ProfileView() {
       if (!idToken) throw new Error("Please sign in again");
       const res = await fetch("/api/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+          ...anonHeaders(),
+        },
         body: JSON.stringify({ id }),
       });
       if (!res.ok) {

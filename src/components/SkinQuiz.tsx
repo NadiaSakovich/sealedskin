@@ -7,6 +7,8 @@ import { SKIN_CONCERNS } from "../data/concerns";
 import { SKIN_GOALS, COMMITMENT_LEVELS, REGIONS } from "../data/goals";
 import { needsSummary, AGE_LABELS } from "../data/actives";
 import { analyzeSkin } from "../lib/analysis";
+import { anonHeaders } from "../lib/anonId";
+import { getCurrentIdToken } from "../lib/firebase/client";
 import type { AnswerStyle, Profile, RegionId } from "../types";
 
 import { Shell } from "./layout/Shell";
@@ -335,9 +337,17 @@ export default function SkinQuiz() {
     setRebuildCount((c) => c + 1);
     const { analysis, profile } = buildProfile();
     try {
+      // Identify the request for logging only: the anonymous browser id always,
+      // plus the Firebase token when signed in so the log line carries a real
+      // uid. The route never requires either — the quiz works signed out.
+      const idToken = await getCurrentIdToken().catch(() => null);
       const res = await fetch("/api/routine", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...anonHeaders(),
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ answers: toQuizAnswers(), model: targetModel }),
       });
       if (!res.ok) {

@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { signInWithGoogle, getCurrentIdToken, POPUP_CLOSED } from "../../lib/firebase/client";
 import { useAuth } from "../../lib/firebase/useAuth";
 import type { SaveQuizRequest } from "../../lib/domain/types";
+import { anonHeaders } from "../../lib/anonId";
 
 type Status = "idle" | "saving" | "saved" | "error" | "limit";
 
@@ -55,6 +56,7 @@ export function SaveRoutine({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
+          ...anonHeaders(),
         },
         body: JSON.stringify(editing ? { ...payload, id: editId } : payload),
       });

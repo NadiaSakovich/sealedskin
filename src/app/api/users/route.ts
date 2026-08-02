@@ -3,6 +3,14 @@ import { FieldValue } from "firebase-admin/firestore";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import type { SaveQuizRequest } from "@/lib/domain/types";
+import {
+  logger,
+  flushLogs,
+  userContext,
+  readAnonId,
+  errorData,
+  type UserContext,
+} from "@/lib/logger";
 
 // firebase-admin uses Node APIs — pin this route to the Node.js runtime.
 export const runtime = "nodejs";
@@ -19,6 +27,29 @@ async function authedUid(req: Request): Promise<DecodedIdToken | null> {
   }
 }
 
+/** Log fields for a verified caller. Identity comes from the token, not the body. */
+function ctx(token: DecodedIdToken, req: Request): UserContext {
+  return userContext({
+    uid: token.uid,
+    email: token.email,
+    anonId: readAnonId(req),
+  });
+}
+
+/**
+ * A rejected request has no verified identity, so it is logged against the
+ * anonymous id alone. Worth recording: a burst of these is either a bug in the
+ * client's token refresh or someone probing the endpoint.
+ */
+async function unauthorized(req: Request, operation: string) {
+  logger.warn("users.unauthorized", {
+    ...userContext({ anonId: readAnonId(req) }),
+    operation,
+  });
+  await flushLogs();
+  return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+}
+
 /**
  * GET /api/users
  * Headers: Authorization: Bearer <Firebase ID token>
@@ -28,9 +59,8 @@ async function authedUid(req: Request): Promise<DecodedIdToken | null> {
  */
 export async function GET(req: Request) {
   const token = await authedUid(req);
-  if (!token) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-  }
+  if (!token) return unauthorized(req, "list");
+  const user = ctx(token, req);
 
   try {
     const db = adminDb();
@@ -57,6 +87,9 @@ export async function GET(req: Request) {
       quizzes[0].isMain = true;
     }
 
+    logger.info("users.list", { ...user, routineCount: quizzes.length });
+    await flushLogs();
+
     return NextResponse.json({
       profile: {
         uid: token.uid,
@@ -68,6 +101,8 @@ export async function GET(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    logger.error("users.list.failed", { ...user, ...errorData(err) });
+    await flushLogs();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -83,17 +118,20 @@ export async function GET(req: Request) {
  */
 export async function PUT(req: Request) {
   const token = await authedUid(req);
-  if (!token) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-  }
+  if (!token) return unauthorized(req, "update");
+  const user = ctx(token, req);
 
   let body: SaveQuizRequest & { id?: string };
   try {
     body = await req.json();
   } catch {
+    logger.warn("users.badRequest", { ...user, operation: "update", reason: "invalid JSON body" });
+    await flushLogs();
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   if (!body?.id || !body?.submission || !body?.result) {
+    logger.warn("users.badRequest", { ...user, operation: "update", reason: "missing fields" });
+    await flushLogs();
     return NextResponse.json(
       { error: "Body must include `id`, `submission` and `result`" },
       { status: 400 },
@@ -108,6 +146,8 @@ export async function PUT(req: Request) {
       .collection("quizzes")
       .doc(body.id);
     if (!(await quizRef.get()).exists) {
+      logger.warn("users.update.notFound", { ...user, quizId: body.id });
+      await flushLogs();
       return NextResponse.json({ error: "Routine not found" }, { status: 404 });
     }
     await quizRef.set(
@@ -118,9 +158,13 @@ export async function PUT(req: Request) {
       },
       { merge: true },
     );
+    logger.info("users.update", { ...user, quizId: body.id });
+    await flushLogs();
     return NextResponse.json({ ok: true, quizId: body.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    logger.error("users.update.failed", { ...user, quizId: body.id, ...errorData(err) });
+    await flushLogs();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -133,12 +177,13 @@ export async function PUT(req: Request) {
  */
 export async function DELETE(req: Request) {
   const token = await authedUid(req);
-  if (!token) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-  }
+  if (!token) return unauthorized(req, "delete");
+  const user = ctx(token, req);
 
   const id = new URL(req.url).searchParams.get("id");
   if (!id) {
+    logger.warn("users.badRequest", { ...user, operation: "delete", reason: "missing id" });
+    await flushLogs();
     return NextResponse.json({ error: "Missing `id` query parameter" }, { status: 400 });
   }
 
@@ -156,15 +201,21 @@ export async function DELETE(req: Request) {
 
     // Keep exactly one main: if the deleted routine was main, promote the newest
     // remaining routine.
+    let promotedId: string | null = null;
     if (wasMain) {
       const rest = await quizzesRef.orderBy("createdAt", "desc").limit(1).get();
       if (!rest.empty) {
         await rest.docs[0].ref.set({ isMain: true }, { merge: true });
+        promotedId = rest.docs[0].id;
       }
     }
+    logger.info("users.delete", { ...user, quizId: id, wasMain, promotedId });
+    await flushLogs();
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    logger.error("users.delete.failed", { ...user, quizId: id, ...errorData(err) });
+    await flushLogs();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -179,17 +230,20 @@ export async function DELETE(req: Request) {
  */
 export async function PATCH(req: Request) {
   const token = await authedUid(req);
-  if (!token) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-  }
+  if (!token) return unauthorized(req, "setMain");
+  const user = ctx(token, req);
 
   let body: { id?: string };
   try {
     body = await req.json();
   } catch {
+    logger.warn("users.badRequest", { ...user, operation: "setMain", reason: "invalid JSON body" });
+    await flushLogs();
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   if (!body?.id) {
+    logger.warn("users.badRequest", { ...user, operation: "setMain", reason: "missing id" });
+    await flushLogs();
     return NextResponse.json({ error: "Body must include `id`" }, { status: 400 });
   }
 
@@ -199,6 +253,8 @@ export async function PATCH(req: Request) {
       .doc(token.uid)
       .collection("quizzes");
     if (!(await quizzesRef.doc(body.id).get()).exists) {
+      logger.warn("users.setMain.notFound", { ...user, quizId: body.id });
+      await flushLogs();
       return NextResponse.json({ error: "Routine not found" }, { status: 404 });
     }
 
@@ -209,9 +265,13 @@ export async function PATCH(req: Request) {
       batch.set(doc.ref, { isMain: doc.id === body.id }, { merge: true });
     });
     await batch.commit();
+    logger.info("users.setMain", { ...user, quizId: body.id, routineCount: all.size });
+    await flushLogs();
     return NextResponse.json({ ok: true, mainId: body.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    logger.error("users.setMain.failed", { ...user, quizId: body.id, ...errorData(err) });
+    await flushLogs();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -230,6 +290,12 @@ export async function POST(req: Request) {
   const header = req.headers.get("authorization") ?? "";
   const bearer = header.match(/^Bearer (.+)$/i);
   if (!bearer) {
+    logger.warn("users.unauthorized", {
+      ...userContext({ anonId: readAnonId(req) }),
+      operation: "save",
+      reason: "missing or malformed Authorization header",
+    });
+    await flushLogs();
     return NextResponse.json(
       { error: "Missing or malformed Authorization header" },
       { status: 401 },
@@ -239,17 +305,22 @@ export async function POST(req: Request) {
   try {
     token = await adminAuth().verifyIdToken(bearer[1]);
   } catch {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    return unauthorized(req, "save");
   }
+  const user = ctx(token, req);
 
   // 2. Parse and validate the body.
   let body: SaveQuizRequest;
   try {
     body = await req.json();
   } catch {
+    logger.warn("users.badRequest", { ...user, operation: "save", reason: "invalid JSON body" });
+    await flushLogs();
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   if (!body?.submission || !body?.result) {
+    logger.warn("users.badRequest", { ...user, operation: "save", reason: "missing fields" });
+    await flushLogs();
     return NextResponse.json(
       { error: "Body must include `submission` and `result`" },
       { status: 400 },
@@ -265,6 +336,9 @@ export async function POST(req: Request) {
     // an existing routine goes through PUT and is unaffected.
     const existing = await userRef.collection("quizzes").get();
     if (existing.size >= 3) {
+      // Not an error, but worth seeing: users hitting the cap is a product signal.
+      logger.info("users.save.limitReached", { ...user, routineCount: existing.size });
+      await flushLogs();
       return NextResponse.json(
         {
           error:
@@ -296,9 +370,20 @@ export async function POST(req: Request) {
       createdAt: FieldValue.serverTimestamp(),
     });
 
+    logger.info("users.save", {
+      ...user,
+      quizId: quizRef.id,
+      isFirstRoutine: isFirst,
+      routineCount: existing.size + 1,
+      newAccount: !exists,
+    });
+    await flushLogs();
+
     return NextResponse.json({ ok: true, quizId: quizRef.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    logger.error("users.save.failed", { ...user, ...errorData(err) });
+    await flushLogs();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
