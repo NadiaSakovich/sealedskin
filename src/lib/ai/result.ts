@@ -3,6 +3,7 @@ import type {
   Concern,
   Goal,
   Profile,
+  RegionId,
   Routine,
   RoutineStep,
   ScoredActive,
@@ -13,6 +14,7 @@ import {
   capMinimalSteps,
   MOISTURISING_SPF_STEP,
 } from "@/data/actives";
+import { isOffRegion } from "@/data/brandRegions";
 import type { AiRoutineOutput } from "@/lib/domain/types";
 import type { GroundingInfo } from "./types";
 
@@ -101,6 +103,57 @@ function applyMinimalShape(
 }
 
 /** Adapt the grounded AI output onto the design view types. */
+/**
+ * Drop grounded picks whose brand demonstrably comes from another region.
+ *
+ * The region preference means brand ORIGIN (see `data/brandRegions.ts`), and the
+ * prompt alone doesn't hold: measured over repeated runs of the same European
+ * profile on `gemini-3.5-flash-lite`, 3 of 4 still slipped in CeraVe, The
+ * Ordinary or a Korean brand. So the prompt gets the right products and this
+ * guarantees the rule — the same split as the minimal-routine shape.
+ *
+ * Mutates in place, and runs LAST so the split/minimal reshuffles above have
+ * already settled their `productsByType` keys. Only brands whose origin we
+ * actually know are dropped; a step left with fewer picks (or none) is fine —
+ * `ShopView` renders an empty step with a note rather than hiding it.
+ */
+function enforceRegion(productsByType: Record<string, ShopProduct[]>, region: RegionId): void {
+  if (!region || region === "none") return;
+  for (const [step, picks] of Object.entries(productsByType)) {
+    productsByType[step] = picks
+      .map((p) => keepInRegion(p, region))
+      .filter((p): p is ShopProduct => p !== null);
+  }
+}
+
+/** Split a paired "A / B" (or "A or B") field into its alternatives. */
+const ALTERNATIVES_RE = /\s*\/\s*|\s+or\s+/i;
+
+/**
+ * A single pick, with out-of-region alternatives removed — or `null` if nothing
+ * of it survives.
+ *
+ * The model sometimes offers two brands in one row ("Heimish / SVR", named
+ * "All Clean Balm / Topialyse Cleansing Balm"). That slipped straight through a
+ * plain brand lookup, because the joined string matches no brand at all. When
+ * the brand and name split into the same number of parts we can drop just the
+ * offending half and keep the rest; when they don't line up we can't tell which
+ * name belongs to which brand, so the whole pick goes.
+ */
+function keepInRegion(p: ShopProduct, region: RegionId): ShopProduct | null {
+  const brands = p.brand.split(ALTERNATIVES_RE).filter(Boolean);
+  if (brands.length < 2) return isOffRegion(p.brand, region) ? null : p;
+
+  const names = p.name.split(ALTERNATIVES_RE).filter(Boolean);
+  const keep = brands
+    .map((brand, i) => ({ brand, name: names[i] }))
+    .filter((x) => !isOffRegion(x.brand, region));
+  if (!keep.length) return null;
+  if (keep.length === brands.length) return p;
+  if (names.length !== brands.length) return null;
+  return { ...p, brand: keep.map((x) => x.brand).join(" / "), name: keep.map((x) => x.name).join(" / ") };
+}
+
 export function buildAiResult(
   output: AiRoutineOutput,
   profile: Profile,
@@ -183,6 +236,7 @@ export function buildAiResult(
     notes: output.routine.notes ?? [],
   };
   const routine = minimal ? applyMinimalShape(built, productsByType) : built;
+  enforceRegion(productsByType, profile.region);
 
   return { source: "ai", analysis, profile, picked, routine, productsByType, grounding };
 }

@@ -358,18 +358,40 @@ major market. Two places had lost it:
   `SkinQuiz.toQuizAnswers` now sends `label — desc` ("US & Canada — North American brands"), and
   `agent.ts`'s `REGION_RULES` states the origin test with per-region examples *and counter-examples*,
   and replaces the old "unless no regional option exists" escape hatch with "list fewer and say why"
-  (the shop already renders an empty step with a note). Re-measured: 0 off-region brands across all
-  three regions.
+  (the shop already renders an empty step with a note).
 - **The catalog.** Three `region` tags failed the origin test and were corrected: **The Ordinary** →
   `us` (Deciem is Torontonian, not European), **CeraVe** "Moisturising Cream (EU)" → replaced with
   Bioderma (an EU *formulation* of an American brand isn't a European brand), **Belif** → dropped
   from `us` (it's Korean, LG H&H). EU replacements were added so every common slot still has ≥3 per
   region — verified by driving `selectProducts` over all 14 common slots × 3 regions.
 
-There is deliberately **no deterministic enforcement layer** here (unlike the minimal-routine shape):
-brand origin can't be checked without a brand→country table, and the prompt alone measured clean. If
-leaks reappear, `data/products.ts` already carries a maintained brand→region mapping that could seed
-one.
+**The prompt is not enough on its own — don't remove the enforcement.** Grounding is
+non-deterministic, so a single clean run proves nothing: measured over 4 repeats of the *same*
+European profile on `3.5-flash-lite`, the tightened prompt still leaked CeraVe / The Ordinary /
+Heimish on **3 of 4**. (An earlier one-sample-per-region check looked clean and was simply lucky —
+always repeat this measurement.) So region gets the same prompt-**and**-enforcement split as the
+minimal-routine shape:
+
+- `data/brandRegions.ts` — a brand→origin map, seeded from `products.ts` (already tagged by origin,
+  so it stays in sync for free) and extended with the brands grounded searches actually return.
+  `isOffRegion(brand, region)` is true only when the origin is **known** and differs; **unknown
+  brands pass**, since plenty of legitimate small in-region brands will never be listed.
+- `lib/ai/result.ts` — `enforceRegion()` drops off-region picks from `productsByType`. It runs
+  **last** in `buildAiResult`, after the double-cleanse split and `applyMinimalShape` have settled
+  their keys. A step left short (or empty) is acceptable — `ShopView` renders an empty step with a
+  note rather than hiding it, and back-filling from the static catalog is exactly the bug that
+  "Shop product sourcing" above exists to prevent.
+- **Paired brands are the sneaky case.** The model sometimes puts two alternatives in one row —
+  brand `"Heimish / SVR"`, name `"All Clean Balm / Topialyse Cleansing Balm"` — and the joined
+  string matches no brand at all, so a plain lookup waves it through. That is exactly how a Korean
+  brand survived the first version of this filter. `keepInRegion()` splits on `/` and ` or `: when
+  brand and name split into the same number of parts it keeps only the in-region halves (→ "SVR —
+  Topialyse Cleansing Balm"); when they don't line up it can't tell which name goes with which
+  brand, so the whole pick is dropped.
+
+Because it lives in `buildAiResult`, the filter applies before a routine is **saved**, so snapshots
+are clean too — but note `POST /api/routine` returns the *raw* model output, so an API-level test
+does NOT exercise this. Test it through `buildAiResult` or the UI.
 
 **Saved routines are the exception:** a reopened saved routine shows the products **as saved**
 (`productsByType` from its snapshot), not re-fetched — so an old save keeps its original (possibly
