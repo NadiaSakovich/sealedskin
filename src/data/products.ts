@@ -6,6 +6,14 @@ import type { Product, RegionId, RoutineStep } from "../types";
 // to borrow off-region brands \u2014 see selectProducts. Niche actives (azelaic, benzoyl)
 // are genuinely Western-leaning, so those may still mix in (the UI says "leaning
 // toward {region}", not "exclusively"). Brands are EXAMPLES, never endorsements.
+//
+// `region` is the brand's COUNTRY OF ORIGIN \u2014 where it was founded and is
+// identified with \u2014 NOT where the product is sold. Almost every brand here is
+// sold worldwide, so availability would make the tag meaningless. Three tags were
+// wrong on that test and have been corrected: The Ordinary is Canadian (Deciem,
+// Toronto) not European, CeraVe is American even in its EU formulation, and Belif
+// is Korean (LG H&H) not American. The same rule is spelled out to the model in
+// `lib/ai/agent.ts` (REGION_RULES), which is the path users actually hit.
 export const PRODUCTS: Record<string, Product[]> = {
   "cleanser-gel": [
     { region: "asia", tier: "Budget", brand: "COSRX", name: "Low pH Good Morning Gel Cleanser", price: "$12" },
@@ -55,10 +63,11 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "Some By Mi", name: "Galactomyces Pure Vitamin C Serum", price: "$20" },
     { region: "asia", tier: "Mid", brand: "Goodal", name: "Green Tangerine Vita C Serum", price: "$27" },
     { region: "asia", tier: "Mid", brand: "By Wishtrend", name: "Pure Vitamin C 21.5 Advanced Serum", price: "$25" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Vitamin C Suspension 23%", price: "$8" },
     { region: "us", tier: "Mid", brand: "Maelove", name: "Glow Maker Vitamin C Serum", price: "$30" },
     { region: "us", tier: "Budget", brand: "TruSkin", name: "Vitamin C Serum", price: "$20" },
     { region: "us", tier: "Premium", brand: "SkinCeuticals", name: "C E Ferulic", price: "$182" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Vitamin C Suspension 23%", price: "$8" },
+    { region: "eu", tier: "Budget", brand: "The INKEY List", name: "15% Vitamin C and EGF Serum", price: "$16" },
     { region: "eu", tier: "Mid", brand: "La Roche-Posay", name: "Pure Vitamin C10 Serum", price: "$40" },
     { region: "eu", tier: "Budget", brand: "Garnier", name: "Vitamin C Brightening Serum", price: "$15" },
   ],
@@ -66,10 +75,11 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "Anua", name: "Niacinamide 10% + TXA 4% Serum", price: "$20" },
     { region: "asia", tier: "Mid", brand: "COSRX", name: "The Niacinamide 15 Serum", price: "$25" },
     { region: "asia", tier: "Mid", brand: "Numbuzin", name: "No.5 Vitamin-Niacinamide Concentrated Serum", price: "$26" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Niacinamide 10% + Zinc 1%", price: "$6" },
     { region: "us", tier: "Mid", brand: "Glossier", name: "Super Pure Niacinamide + Zinc", price: "$28" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "Niacinamide Serum 12%", price: "$18" },
     { region: "us", tier: "Premium", brand: "Paula\u2019s Choice", name: "10% Niacinamide Booster", price: "$49" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Niacinamide 10% + Zinc 1%", price: "$6" },
+    { region: "eu", tier: "Budget", brand: "Geek & Gorgeous", name: "B-Bomb 10% Niacinamide", price: "$10" },
     { region: "eu", tier: "Budget", brand: "The INKEY List", name: "Niacinamide Serum", price: "$11" },
     { region: "eu", tier: "Premium", brand: "La Roche-Posay", name: "Mela B3 Serum", price: "$45" },
   ],
@@ -77,10 +87,11 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "Isntree", name: "Hyaluronic Acid Water Essence", price: "$22" },
     { region: "asia", tier: "Mid", brand: "Torriden", name: "Dive-In Low Molecular Hyaluronic Acid Serum", price: "$20" },
     { region: "asia", tier: "Budget", brand: "Hada Labo", name: "Gokujyun Premium Hydrating Lotion", price: "$18" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Hyaluronic Acid 2% + B5", price: "$9" },
     { region: "us", tier: "Mid", brand: "Neutrogena", name: "Hydro Boost Hydrating Serum", price: "$22" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "Quadruple Hyaluronic Acid Serum 5%", price: "$20" },
     { region: "us", tier: "Premium", brand: "Peter Thomas Roth", name: "Water Drench Hyaluronic Cloud Serum", price: "$65" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Hyaluronic Acid 2% + B5", price: "$9" },
+    { region: "eu", tier: "Budget", brand: "The INKEY List", name: "Hyaluronic Acid Serum", price: "$10" },
     { region: "eu", tier: "Premium", brand: "Vichy", name: "Min\u00e9ral 89 Booster", price: "$30" },
     { region: "eu", tier: "Mid", brand: "La Roche-Posay", name: "Hyalu B5 Serum", price: "$40" },
   ],
@@ -88,10 +99,11 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "COSRX", name: "BHA Blackhead Power Liquid", price: "$25" },
     { region: "asia", tier: "Budget", brand: "COSRX", name: "One Step Original Clear Pad", price: "$20" },
     { region: "asia", tier: "Budget", brand: "Some By Mi", name: "AHA-BHA-PHA 30 Days Miracle Toner", price: "$17" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Salicylic Acid 2% Solution", price: "$8" },
     { region: "us", tier: "Budget", brand: "Stridex", name: "Maximum Strength Pads", price: "$6" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "BHA Liquid Exfoliant 2%", price: "$18" },
     { region: "us", tier: "Premium", brand: "Paula\u2019s Choice", name: "Skin Perfecting 2% BHA Liquid", price: "$35" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Salicylic Acid 2% Solution", price: "$8" },
+    { region: "eu", tier: "Mid", brand: "Medik8", name: "Blemish SOS", price: "$32" },
     { region: "eu", tier: "Mid", brand: "La Roche-Posay", name: "Effaclar Salicylic Acid Serum", price: "$30" },
     { region: "eu", tier: "Budget", brand: "The INKEY List", name: "Beta Hydroxy Acid Exfoliant", price: "$11" },
   ],
@@ -99,10 +111,11 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Budget", brand: "Some By Mi", name: "AHA-BHA-PHA 30 Days Miracle Toner", price: "$17" },
     { region: "asia", tier: "Mid", brand: "By Wishtrend", name: "Mandelic Acid 5% Skin Prep Water", price: "$22" },
     { region: "asia", tier: "Mid", brand: "COSRX", name: "AHA 7 Whitehead Power Liquid", price: "$23" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Glycolic Acid 7% Toning Solution", price: "$13" },
     { region: "us", tier: "Budget", brand: "Good Molecules", name: "Daily Glycolic Toner", price: "$9" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "Glycolic Acid 12% Exfoliating Serum", price: "$20" },
     { region: "us", tier: "Premium", brand: "Drunk Elephant", name: "T.L.C. Framboos Glycolic Serum", price: "$90" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Glycolic Acid 7% Toning Solution", price: "$13" },
+    { region: "eu", tier: "Budget", brand: "Nip+Fab", name: "Glycolic Fix Liquid Glow", price: "$15" },
     { region: "eu", tier: "Mid", brand: "Pixi", name: "Glow Tonic", price: "$29" },
     { region: "eu", tier: "Premium", brand: "REN", name: "Ready Steady Glow Daily AHA Tonic", price: "$39" },
   ],
@@ -110,18 +123,20 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "COSRX", name: "The Retinol 0.1 Cream", price: "$28" },
     { region: "asia", tier: "Mid", brand: "Some By Mi", name: "Retinol Intense Reactivating Serum", price: "$30" },
     { region: "asia", tier: "Mid", brand: "Goodal", name: "Retinol Youth Firming Serum", price: "$32" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Retinol 0.5% in Squalane", price: "$8" },
     { region: "us", tier: "Mid", brand: "CeraVe", name: "Resurfacing Retinol Serum", price: "$20" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "Retinol Complex Serum", price: "$20" },
     { region: "us", tier: "Premium", brand: "Paula\u2019s Choice", name: "1% Retinol Treatment", price: "$58" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Retinol 0.5% in Squalane", price: "$8" },
+    { region: "eu", tier: "Budget", brand: "The INKEY List", name: "Retinol Serum", price: "$12" },
     { region: "eu", tier: "Budget", brand: "Geek & Gorgeous", name: "A-Game 5 Retinal", price: "$17" },
     { region: "eu", tier: "Premium", brand: "La Roche-Posay", name: "Retinol B3 Pure Serum", price: "$45" },
   ],
   azelaic: [
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "Azelaic Acid Suspension 10%", price: "$12" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "Azelaic Acid Suspension 10%", price: "$12" },
     { region: "us", tier: "Mid", brand: "Naturium", name: "Azelaic Topical Acid 10%", price: "$20" },
     { region: "us", tier: "Premium", brand: "Paula\u2019s Choice", name: "10% Azelaic Acid Booster", price: "$39" },
     { region: "asia", tier: "Budget", brand: "Cos De BAHA", name: "Azelaic Acid 10% Serum", price: "$18" },
+    { region: "eu", tier: "Mid", brand: "Facetheory", name: "Azaclear Azelaic Acid Serum A10", price: "$22" },
   ],
   cica: [
     { region: "asia", tier: "Budget", brand: "SKIN1004", name: "Madagascar Centella Ampoule", price: "$23" },
@@ -142,7 +157,8 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Budget", brand: "Cos De BAHA", name: "Squalane 100% Oil", price: "$16" },
     { region: "us", tier: "Mid", brand: "Indeed Labs", name: "Squalane Facial Oil", price: "$20" },
     { region: "us", tier: "Premium", brand: "Biossance", name: "100% Squalane Oil", price: "$32" },
-    { region: "eu", tier: "Budget", brand: "The Ordinary", name: "100% Plant-Derived Squalane", price: "$9" },
+    { region: "us", tier: "Budget", brand: "The Ordinary", name: "100% Plant-Derived Squalane", price: "$9" },
+    { region: "eu", tier: "Budget", brand: "The INKEY List", name: "Squalane Oil", price: "$10" },
   ],
   "moist-rich": [
     { region: "asia", tier: "Budget", brand: "Round Lab", name: "1025 Dokdo Cream", price: "$23" },
@@ -152,7 +168,7 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "us", tier: "Premium", brand: "First Aid Beauty", name: "Ultra Repair Cream", price: "$38" },
     { region: "us", tier: "Mid", brand: "Cetaphil", name: "Moisturizing Cream", price: "$16" },
     { region: "eu", tier: "Mid", brand: "La Roche-Posay", name: "Toleriane Double Repair Moisturizer", price: "$20" },
-    { region: "eu", tier: "Budget", brand: "CeraVe", name: "Moisturising Cream (EU)", price: "$18" },
+    { region: "eu", tier: "Budget", brand: "Bioderma", name: "Atoderm Intensive Baume", price: "$22" },
     { region: "eu", tier: "Premium", brand: "Av\u00e8ne", name: "Tolerance Control Soothing Cream", price: "$30" },
   ],
   "moist-gel": [
@@ -161,7 +177,7 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "asia", tier: "Mid", brand: "Isntree", name: "Hyaluronic Acid Aqua Gel Cream", price: "$24" },
     { region: "us", tier: "Budget", brand: "Neutrogena", name: "Hydro Boost Water Gel", price: "$20" },
     { region: "us", tier: "Premium", brand: "Clinique", name: "Dramatically Different Hydrating Gel", price: "$32" },
-    { region: "us", tier: "Mid", brand: "Belif", name: "Aqua Bomb Jelly Cream", price: "$36" },
+    { region: "us", tier: "Mid", brand: "Glossier", name: "Priming Moisturizer", price: "$25" },
     { region: "eu", tier: "Mid", brand: "Vichy", name: "Aqualia Thermal Rich Gel", price: "$30" },
     { region: "eu", tier: "Budget", brand: "Garnier", name: "Hyaluronic Aloe Gel Moisturizer", price: "$13" },
     { region: "eu", tier: "Premium", brand: "Clarins", name: "Hydra-Essentiel Cooling Gel", price: "$48" },

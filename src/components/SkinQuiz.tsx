@@ -324,7 +324,12 @@ export default function SkinQuiz() {
     const lvl = LEVELS.find((l) => l.id === commitment);
     if (lvl) out.push({ questionId: "commitment", question: "Routine commitment", answer: lvl.label });
     const reg = REGIONS.find((r) => r.id === region);
-    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.label });
+    // Send the option's description too ("North American brands"), not just the
+    // label: on its own, "US & Canada" reads to the model as a MARKET, and every
+    // big brand is sold there — which is how French and Korean brands were
+    // leaking into a North-American routine. The description carries the actual
+    // intent, which is where the brand itself comes from.
+    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.desc ? `${reg.label} — ${reg.desc}` : reg.label });
     return out;
   }
 
@@ -679,7 +684,6 @@ export default function SkinQuiz() {
         <Screen screenKey="r-ingredients" dir={dir}>
           {resultsTopBar(result.source)}
           <IngredientsView picked={result.picked} sensitive={result.profile.sensitivity === "high"} onContinue={() => go(R_ROUTINE)} onBack={() => go(R_NEEDS, "back")} />
-          {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
       </Shell>
     );
@@ -693,7 +697,6 @@ export default function SkinQuiz() {
         <Screen screenKey="r-routine" dir={dir}>
           {resultsTopBar(result.source)}
           <RoutineView routine={result.routine} minimal={commitment === "minimal"} onContinue={() => go(R_SHOP)} onBack={() => go(R_INGREDIENTS, "back")} />
-          {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
       </Shell>
     );

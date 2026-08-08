@@ -80,6 +80,38 @@ frequency and conflicts (don't combine a retinoid and an acid the same night).
 - Brands are EXAMPLES of the right kind of product, never endorsements. Include a \
 brief note that this is general guidance, not medical advice.`;
 
+/**
+ * How to read the "Region preference" answer. The user is choosing where the
+ * BRAND comes from — the quiz options say so ("North American brands",
+ * "European pharmacy & heritage brands") — but the label alone is easy to read
+ * as a market instead, and since essentially every major brand is sold in every
+ * major market, that reading makes the preference a no-op. It's how La
+ * Roche-Posay (French) and COSRX (Korean) ended up in "US & Canada" routines.
+ * So the test is stated explicitly, with counter-examples, and the "unless no
+ * option exists" escape hatch is replaced by "say so" — the shop UI already
+ * renders a step with no picks rather than hiding it.
+ */
+const REGION_RULES = `Regional preference — apply this literally:
+The user's region preference is about where the BRAND ITSELF originates — the \
+country the brand was founded in and is identified with. It is NOT about where a \
+product can be bought. Almost every well-known brand is sold worldwide, so \
+availability is never the test.
+- "Korean & Asian" means brands founded in Korea, Japan, China or Taiwan (COSRX, \
+Beauty of Joseon, Hada Labo, Anua, Round Lab).
+- "US & Canada" means brands founded in the United States or Canada (CeraVe, \
+Cetaphil, Vanicream, Neutrogena, Paula's Choice, The Ordinary, e.l.f.). European \
+houses — La Roche-Posay, Vichy, Bioderma, Avene, Eucerin, Garnier — do NOT count, \
+even though they are sold everywhere in North America. Korean brands such as \
+COSRX, Heimish or Beauty of Joseon do NOT count either.
+- "European" means brands founded in Europe (La Roche-Posay, Bioderma, Avene, \
+Vichy, Eucerin, The INKEY List, Medik8). North American brands — CeraVe, \
+Cetaphil, The Ordinary (Canadian), Paula's Choice — do NOT count.
+- "No preference" means any origin; give a deliberate spread across regions.
+Every single product you list must pass this test. Check each brand's country of \
+origin before listing it. If you genuinely cannot find a suitable in-region brand \
+for a step, list fewer products for that step and say why — do NOT quietly \
+substitute an out-of-region brand.`;
+
 // STEP 1 — grounded research. We deliberately ask for PROSE (not JSON): Gemini's
 // Google Search grounding reliably corrupts JSON-shaped output, but free-form
 // prose is unaffected, and this is where the live web data (current products,
@@ -98,14 +130,12 @@ balanced = one targeted serum; thorough = layered), with a short note per step. 
 If a double cleanse suits the PM routine, write it as TWO separate steps — an \
 oil/balm cleanser, then a water-based cleanser — never a single "double cleanse" \
 step, so each can have its own products.
-3. For each routine step, give EXACTLY THREE current example products available \
-in the user's region — ideally one Budget, one Mid, and one Premium; if you can't \
-find three distinct price tiers, still give three options (repeating a tier is \
-fine). Each needs a brand, product name, an approximate price, and a tier \
-(Budget/Mid/Premium). If the user stated a regional preference (e.g. Korean & \
-Asian, European), STRONGLY favour brands actually from that region for every step \
-— do not substitute well-known brands from other regions unless no suitable \
-regional option exists.
+3. For each routine step, give EXACTLY THREE current example products — ideally \
+one Budget, one Mid, and one Premium; if you can't find three distinct price \
+tiers, still give three options (repeating a tier is fine). Each needs a brand, \
+product name, an approximate price, and a tier (Budget/Mid/Premium).
+
+${REGION_RULES}
 
 ${SAFETY_RULES}`;
 
