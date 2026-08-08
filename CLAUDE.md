@@ -645,6 +645,22 @@ Google Chrome** from a throwaway dir to keep project deps clean:
       the combined step with no empty-step notes, 0 console errors.
     - Handy: `npx --yes tsx <script>.mts` run from the repo root resolves the `@/*` alias, so
       `lib/**` functions can be unit-tested directly without adding a test framework.
+24. **Custom domain, quieter grounding credit, and the region-preference fix (this session):**
+    - **`sealedskin.com` went live** (DNS at Cloudflare, `A @` + `CNAME www` pointing at Vercel, both
+      records **DNS only** / grey cloud so Vercel's cert can issue). `sealedskin.vercel.app` still
+      works. Nothing in the code hardcoded the old host, so no repo change was needed — but Firebase
+      Auth → Settings → **Authorized domains** must list the new host or Google sign-in fails with
+      `auth/unauthorized-domain`.
+    - **Grounding credit shrunk to a footnote** — see the Grounding ToS note above. Also fixed a
+      layout bug it exposed: Google's chip is a `white-space: nowrap` carousel that overflowed the
+      reading column until its wrapper got `min-w-0`.
+    - **Region preference fixed end-to-end** — see "Region means brand ORIGIN, not availability".
+      Three parts: the prompt (`REGION_RULES` + sending the option's description, not just its
+      label), the catalog's mis-tagged brands (The Ordinary / CeraVe / Belif), and a new
+      deterministic `enforceRegion()` filter backed by `data/brandRegions.ts`.
+    - **Process lesson worth keeping:** the first pass was declared fixed on the strength of ONE
+      grounded run per region. Repeating the same profile showed 3 of 4 runs still leaking. Anything
+      measured through a grounded model needs **repeated** runs before it counts as verified.
 
 ## Likely next steps
 
@@ -666,5 +682,12 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.
 - Optionally delete `design-incoming/` once no longer needed as reference.
 - Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.6-flash` path.
-- Add a **`README.md`** (setup/run, required env vars) now that the repo is public; consider a
-  deploy target (Vercel) and basic CI (`tsc --noEmit` + `next build`).
+- Consider basic CI (`tsc --noEmit` + `next build`) — the `README.md` and the Vercel deploy are done.
+- **Spot-check the EU catalog replacements** added when The Ordinary was re-tagged to `us`: the
+  INKEY List / Geek & Gorgeous / Medik8 / Nip+Fab / Facetheory entries came from model knowledge,
+  not grounded search, so the exact product names and prices are worth verifying. Offline-fallback
+  only, so it's low risk.
+- **Keep `data/brandRegions.ts` growing** as grounded searches surface new brands. A dev-only log
+  when `enforceRegion` drops a pick would make the gaps visible instead of silent.
+- Saved routines keep their original picks until rebuilt, so **pre-fix saves still show off-region
+  products**. If that matters, a one-off migration or a "refresh this routine" action would fix it.
