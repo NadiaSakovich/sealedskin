@@ -343,8 +343,33 @@ a hardcoded list. The flow (`components/results/ShopView.tsx`):
 - `products.ts` catalog depth: every **common** routine slot has ≥3 options per major region
   (asia/us/eu) so the offline fallback can honour a region preference without borrowing off-region
   brands; niche actives (azelaic/benzoyl/squalane/cica) may still mix, matching the "leaning toward
-  {region}" copy. The grounded prompt (`agent.ts`) also asks for exactly three picks per step and to
-  strongly favour the user's stated region.
+  {region}" copy. The grounded prompt (`agent.ts`) also asks for exactly three picks per step.
+
+### Region means brand ORIGIN, not availability
+
+The quiz's region options are about where a brand *comes from* — `goals.ts` spells it out ("North
+American brands", "European pharmacy & heritage brands"). That distinction is easy to lose, and
+losing it makes the whole preference a no-op, since essentially every major brand is sold in every
+major market. Two places had lost it:
+
+- **The prompt.** The model was sent only the bare label (`Region preference: US & Canada`), which
+  reads as a *market*. Measured result: "Korean & Asian" stayed clean (unambiguous), but "US &
+  Canada" returned La Roche-Posay, COSRX, Heimish and Peach & Slices. Fixed on both ends —
+  `SkinQuiz.toQuizAnswers` now sends `label — desc` ("US & Canada — North American brands"), and
+  `agent.ts`'s `REGION_RULES` states the origin test with per-region examples *and counter-examples*,
+  and replaces the old "unless no regional option exists" escape hatch with "list fewer and say why"
+  (the shop already renders an empty step with a note). Re-measured: 0 off-region brands across all
+  three regions.
+- **The catalog.** Three `region` tags failed the origin test and were corrected: **The Ordinary** →
+  `us` (Deciem is Torontonian, not European), **CeraVe** "Moisturising Cream (EU)" → replaced with
+  Bioderma (an EU *formulation* of an American brand isn't a European brand), **Belif** → dropped
+  from `us` (it's Korean, LG H&H). EU replacements were added so every common slot still has ≥3 per
+  region — verified by driving `selectProducts` over all 14 common slots × 3 regions.
+
+There is deliberately **no deterministic enforcement layer** here (unlike the minimal-routine shape):
+brand origin can't be checked without a brand→country table, and the prompt alone measured clean. If
+leaks reappear, `data/products.ts` already carries a maintained brand→region mapping that could seed
+one.
 
 **Saved routines are the exception:** a reopened saved routine shows the products **as saved**
 (`productsByType` from its snapshot), not re-fetched — so an old save keeps its original (possibly

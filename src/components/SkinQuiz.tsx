@@ -324,7 +324,12 @@ export default function SkinQuiz() {
     const lvl = LEVELS.find((l) => l.id === commitment);
     if (lvl) out.push({ questionId: "commitment", question: "Routine commitment", answer: lvl.label });
     const reg = REGIONS.find((r) => r.id === region);
-    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.label });
+    // Send the option's description too ("North American brands"), not just the
+    // label: on its own, "US & Canada" reads to the model as a MARKET, and every
+    // big brand is sold there — which is how French and Korean brands were
+    // leaking into a North-American routine. The description carries the actual
+    // intent, which is where the brand itself comes from.
+    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.desc ? `${reg.label} — ${reg.desc}` : reg.label });
     return out;
   }
 
