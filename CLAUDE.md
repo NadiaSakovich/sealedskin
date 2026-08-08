@@ -107,7 +107,12 @@ ingredients, routine (am/pm/notes), and grounded product picks.
 
 **Grounding ToS:** when a grounded answer is shown you MUST display the source links AND the Search
 Suggestions chip (`GroundingSources` renders `grounding.searchSuggestionHtml` via
-`dangerouslySetInnerHTML`) — required by Google's grounding terms.
+`dangerouslySetInnerHTML`) — required by Google's grounding terms. It is deliberately **discreet**:
+one small footnote line ("SOURCES · domain · domain · +N more" + the chip), rendered **once**, at the
+bottom of the **shop** screen only — it used to be a bordered card repeated under the ingredients,
+routine *and* shop screens, which read as redundant. Don't restyle the chip markup itself (the terms
+require it unmodified); the wrapper carries `min-w-0` so Google's nowrap carousel scrolls inside the
+reading column instead of overflowing it.
 
 `ModelPicker` is **TEMPORARY** (`// TEMPORARY` marked) — a dev switch between the two models so the
 user can compare; to be removed once one model is chosen.

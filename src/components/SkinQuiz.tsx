@@ -679,7 +679,6 @@ export default function SkinQuiz() {
         <Screen screenKey="r-ingredients" dir={dir}>
           {resultsTopBar(result.source)}
           <IngredientsView picked={result.picked} sensitive={result.profile.sensitivity === "high"} onContinue={() => go(R_ROUTINE)} onBack={() => go(R_NEEDS, "back")} />
-          {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
       </Shell>
     );
@@ -693,7 +692,6 @@ export default function SkinQuiz() {
         <Screen screenKey="r-routine" dir={dir}>
           {resultsTopBar(result.source)}
           <RoutineView routine={result.routine} minimal={commitment === "minimal"} onContinue={() => go(R_SHOP)} onBack={() => go(R_INGREDIENTS, "back")} />
-          {result.source === "ai" && result.grounding && <GroundingSources grounding={result.grounding} />}
         </Screen>
       </Shell>
     );

@@ -1,44 +1,62 @@
 import type { GroundingInfo } from "../../lib/ai/types";
 
+/** How many source links to name inline before collapsing the rest into "+N". */
+const MAX_SHOWN = 3;
+
+/** Gemini sets a web chunk's `title` to the site domain; fall back to the URI host. */
+function sourceLabel(title: string, uri: string) {
+  if (title) return title;
+  try {
+    return new URL(uri).hostname.replace(/^www\./, "");
+  } catch {
+    return uri;
+  }
+}
+
 /**
- * Shows the web sources the model grounded its answer in, plus Google's
- * "Search Suggestions" chip. Displaying the chip (`searchSuggestionHtml`) is
- * required by the Grounding with Google Search terms whenever a grounded answer
- * is shown to the user.
+ * A single discreet line crediting the web sources the model grounded its answer
+ * in, plus Google's "Search Suggestions" chip. Displaying the chip
+ * (`searchSuggestionHtml`) is required by the Grounding with Google Search terms
+ * whenever a grounded answer is shown to the user, so this stays visible — it is
+ * just kept small, and rendered once (on the shop screen) rather than repeated
+ * under every results screen.
  */
 export function GroundingSources({ grounding }: { grounding: GroundingInfo }) {
-  const hasSources = grounding.sources.length > 0;
+  const shown = grounding.sources.slice(0, MAX_SHOWN);
+  const extra = grounding.sources.length - shown.length;
   const hasChip = Boolean(grounding.searchSuggestionHtml);
-  if (!hasSources && !hasChip) return null;
+  if (!shown.length && !hasChip) return null;
 
   return (
-    <div className="mt-6 px-[18px] py-4 rounded-[14px] bg-ss-surface border border-ss-hairline">
-      <div className="font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-accent-ink mb-[10px]">
-        Grounded with Google Search
-      </div>
-
-      {hasSources && (
-        <ul className="list-none m-0 p-0 grid gap-[7px] mb-3">
-          {grounding.sources.map((s, i) => (
-            <li key={i} className="flex gap-[9px] items-start">
-              <span aria-hidden="true" className="shrink-0 mt-2 w-1 h-1 rounded-full bg-ss-accent" />
+    <div className="mt-5 grid gap-2 text-[11.5px] leading-[1.5] text-ss-ink-faint">
+      {shown.length > 0 && (
+        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span className="font-mono text-[10px] tracking-[0.08em] uppercase">Sources</span>
+          {shown.map((s, i) => (
+            <span key={i} className="flex items-center gap-x-1.5">
+              <span aria-hidden="true">·</span>
               <a
                 href={s.uri}
                 target="_blank"
                 rel="noreferrer"
-                className="flex-1 block text-[13px] leading-[1.4] text-ss-accent-ink underline decoration-ss-hairline underline-offset-2 [text-wrap:pretty]"
+                className="underline decoration-ss-hairline-strong underline-offset-2 hover:text-ss-accent-ink"
               >
-                {s.title || s.uri}
+                {sourceLabel(s.title, s.uri)}
               </a>
-            </li>
+            </span>
           ))}
-        </ul>
+          {extra > 0 && <span>· +{extra} more</span>}
+        </span>
       )}
 
       {hasChip && (
+        // `min-w-0` matters: Google's markup is a nowrap carousel that only
+        // scrolls inside a width-constrained parent — without it the chip grows
+        // past the reading column.
         <div
-          className="text-[12px] [&_a]:text-ss-accent-ink"
-          // Google-provided Search Suggestions markup; required for display.
+          className="min-w-0"
+          // Google-provided Search Suggestions markup; required for display,
+          // and rendered unmodified.
           dangerouslySetInnerHTML={{ __html: grounding.searchSuggestionHtml }}
         />
       )}
