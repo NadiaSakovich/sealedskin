@@ -76,16 +76,21 @@ export function SiteHeader() {
           <AccountControl />
         </nav>
 
-        <button
-          type="button"
-          aria-label="Menu"
-          onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden inline-flex flex-col items-center justify-center gap-1 border border-ss-hairline-strong bg-transparent rounded-[10px] w-10 h-10 cursor-pointer"
-        >
-          {[0, 1, 2].map((i) => (
-            <span key={i} className="w-4 h-[1.6px] bg-ss-ink rounded-[2px]" />
-          ))}
-        </button>
+        {/* Narrow screens: the account control lives beside the hamburger, not
+            inside the menu it opens. */}
+        <div className="md:hidden flex items-center gap-2">
+          <AccountControl compact />
+          <button
+            type="button"
+            aria-label="Menu"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="inline-flex flex-col items-center justify-center gap-1 border border-ss-hairline-strong bg-transparent rounded-[10px] w-10 h-10 cursor-pointer"
+          >
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="w-4 h-[1.6px] bg-ss-ink rounded-[2px]" />
+            ))}
+          </button>
+        </div>
       </div>
 
       {menuOpen && (
@@ -102,9 +107,6 @@ export function SiteHeader() {
           ))}
           <div className="mt-1 border-t border-ss-hairline pt-1">
             <ThemeToggle full />
-          </div>
-          <div className="mt-2">
-            <AccountControl full />
           </div>
         </div>
       )}
