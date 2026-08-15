@@ -4,7 +4,7 @@ import { Arrow } from "@/components/ui/Arrow";
 import { PageBanner } from "@/components/ui/PageBanner";
 
 export const metadata: Metadata = {
-  title: "How it works — SealedSkin",
+  title: "How it works - SealedSkin",
   description:
     "How SealedSkin turns a few quick questions about your skin into a personalized AM/PM skincare routine.",
 };
@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 const STEPS: { title: string; body: string }[] = [
   {
     title: "Answer a few questions about your skin",
-    body: "Seven quick, no-wrong-answer questions about how your skin actually behaves day to day — tightness after cleansing, midday shine, sensitivity, and so on. Takes about a minute.",
+    body: "Seven quick, no-wrong-answer questions about how your skin actually behaves day to day - tightness after cleansing, midday shine, sensitivity, and so on. Takes about a minute.",
   },
   {
     title: "Tell us what you want to improve",
-    body: "Pick the concerns you notice — as many or as few as feel true — then star up to three that matter most right now. Those become the centre of your routine.",
+    body: "Pick the concerns you notice - as many or as few as feel true - then star up to three that matter most right now. Those become the centre of your routine.",
   },
   {
     title: "Set your preferences",
@@ -24,7 +24,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "Get your routine",
-    body: "A clear read on your skin type, the key ingredients worth looking for, and a step-by-step AM/PM routine — plus example product picks you can shop at any budget.",
+    body: "A clear read on your skin type, the key ingredients worth looking for, and a step-by-step AM/PM routine - plus example product picks you can shop at any budget.",
   },
 ];
 
@@ -72,7 +72,7 @@ export default function HowItWorksPage() {
       <div className="mt-9 bg-ss-accent-tint/60 border border-ss-hairline rounded-2xl p-5">
         <h2 className="font-head font-semibold text-[16px] text-ss-ink m-0 mb-2">What&rsquo;s behind the suggestions</h2>
         <ul className="m-0 pl-5 grid gap-[7px] text-[14.5px] leading-[1.5] text-ss-ink-soft [text-wrap:pretty]">
-          <li>Sunscreen and a hydrator are always part of the routine — the two steps that help almost everyone.</li>
+          <li>Sunscreen and a hydrator are always part of the routine - the two steps that help almost everyone.</li>
           <li>If you tell us you&rsquo;re pregnant or nursing, ingredients flagged to avoid are filtered out automatically.</li>
           <li>Recommendations are evidence-informed and AI-assisted, and the underlying model can be swapped over time.</li>
           <li>This is a heuristic guide, not medical advice. For a diagnosed condition, see a dermatologist.</li>

@@ -3,7 +3,7 @@ import { ContentShell } from "@/components/layout/ContentShell";
 import { ProfileView } from "@/components/profile/ProfileView";
 
 export const metadata: Metadata = {
-  title: "My account — SealedSkin",
+  title: "My account - SealedSkin",
   description: "Your saved skincare routines and skin profile.",
 };
 

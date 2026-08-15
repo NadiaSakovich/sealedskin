@@ -4,7 +4,7 @@ import { Arrow } from "@/components/ui/Arrow";
 import { PageBanner } from "@/components/ui/PageBanner";
 
 export const metadata: Metadata = {
-  title: "About — SealedSkin",
+  title: "About - SealedSkin",
   description:
     "What SealedSkin is, what we believe about skincare, and how we build a routine that's honest, personal, and private.",
 };
@@ -21,7 +21,7 @@ export default function AboutPage() {
         Skincare advice without the noise
       </h1>
       <p className="text-[16.5px] leading-[1.6] text-ss-ink-soft max-w-[560px] [text-wrap:pretty]">
-        The skincare aisle runs on confusion — more steps, more products, more promises. SealedSkin
+        The skincare aisle runs on confusion - more steps, more products, more promises. SealedSkin
         is the opposite. We ask a few honest questions, read what your skin tells us, and hand back
         a routine you can actually keep up with.
       </p>
@@ -45,14 +45,14 @@ export default function AboutPage() {
       <p className={para}>
         Your answers feed a skin analysis and an AM/PM routine matched to your type, concerns, and
         how involved you want to be. The routine engine is AI-assisted and evidence-informed, and
-        it&rsquo;s designed to be model-agnostic — so the advice can keep improving as the
+        it&rsquo;s designed to be model-agnostic - so the advice can keep improving as the
         technology behind it does, without changing the experience.
       </p>
 
       <h2 className={sectionH}>Your privacy</h2>
       <p className={para}>
         The quiz is meant to feel low-stakes. Your answers stay private and are only used to build
-        your routine — nothing about your skin is sold or put on display. You can retake the quiz
+        your routine - nothing about your skin is sold or put on display. You can retake the quiz
         any time without leaving a trail.
       </p>
 
@@ -60,7 +60,7 @@ export default function AboutPage() {
       <p className={para}>
         Product brands we show are examples to illustrate a routine, not endorsements, and the
         content is a heuristic guide rather than medical advice. If you&rsquo;re pregnant or nursing
-        we filter out ingredients flagged to avoid — but for a diagnosed skin condition, or anything
+        we filter out ingredients flagged to avoid - but for a diagnosed skin condition, or anything
         that worries you, please see a dermatologist.
       </p>
 

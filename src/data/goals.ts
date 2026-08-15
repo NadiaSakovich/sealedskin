@@ -16,9 +16,9 @@ export const SKIN_GOALS: Goal[] = [
 ];
 
 export const COMMITMENT_LEVELS: OptionLevel[] = [
-  { id: "minimal", label: "Keep it minimal", desc: "2–3 steps — in and out, every day", meta: "Essentials only" },
-  { id: "balanced", label: "A balanced routine", desc: "4–5 steps — a proper morning & evening", meta: "Most popular" },
-  { id: "thorough", label: "Go thorough", desc: "6+ steps — I enjoy the full ritual", meta: "Maximum results" },
+  { id: "minimal", label: "Keep it minimal", desc: "2-3 steps - in and out, every day", meta: "Essentials only" },
+  { id: "balanced", label: "A balanced routine", desc: "4-5 steps - a proper morning & evening", meta: "Most popular" },
+  { id: "thorough", label: "Go thorough", desc: "6+ steps - I enjoy the full ritual", meta: "Maximum results" },
 ];
 
 export const REGIONS: OptionLevel[] = [

@@ -1,8 +1,8 @@
 import type { Active, Profile, ScoredActive, Routine, RoutineStep, Concern, Goal, AgeId, Analysis } from "../types";
 
 export const ACTIVES: Active[] = [
-  { id: "spf", name: "Broad-spectrum SPF", aka: "Mineral or hybrid, SPF 30–50", type: "Sunscreen",
-    what: "Shields skin from UV — the main driver of dark spots, fine lines and lost firmness.",
+  { id: "spf", name: "Broad-spectrum SPF", aka: "Mineral or hybrid, SPF 30-50", type: "Sunscreen",
+    what: "Shields skin from UV - the main driver of dark spots, fine lines and lost firmness.",
     why: "The single most effective step for protecting your skin and every result you build.",
     for: ["everyone", "protect"], gentle: true },
   { id: "vitc", name: "Vitamin C", aka: "L-ascorbic acid or derivatives", type: "Antioxidant serum",
@@ -17,26 +17,26 @@ export const ACTIVES: Active[] = [
     what: "An oil-soluble acid that gets inside pores to clear oil and dead skin.",
     why: "Keeps breakouts and blackheads in check and refines congested skin.",
     for: ["acne", "congestion", "oil", "pores", "texture"], gentle: false, avoidInPregnancy: true },
-  { id: "benzoyl", name: "Benzoyl peroxide", aka: "2.5–5%", type: "Spot treatment",
+  { id: "benzoyl", name: "Benzoyl peroxide", aka: "2.5-5%", type: "Spot treatment",
     what: "Kills the bacteria behind inflamed breakouts.",
     why: "Targets active, stubborn spots directly.",
     for: ["acne"], gentle: false, avoidInPregnancy: true },
-  { id: "azelaic", name: "Azelaic acid", aka: "10–15%", type: "Targeted serum",
+  { id: "azelaic", name: "Azelaic acid", aka: "10-15%", type: "Targeted serum",
     what: "A gentle multitasker for redness, breakouts and pigment.",
-    why: "A calmer route to clearer, more even skin — kind to sensitive types.",
+    why: "A calmer route to clearer, more even skin - kind to sensitive types.",
     for: ["redness", "darkspots", "acne", "calm", "dullness"], gentle: true },
   { id: "retinoid", name: "Retinol / Retinoid", aka: "Vitamin A", type: "Renewing treatment",
     what: "Speeds cell turnover and stimulates collagen as it renews skin.",
     why: "The gold-standard active for lines, firmness, texture and stubborn breakouts.",
-    for: ["wrinkles", "firmness", "texture", "acne", "darkspots", "30s", "40s", "50plus"], gentle: false, avoidInPregnancy: true },
+    for: ["wrinkles", "firmness", "texture", "acne", "darkspots", "25to34", "35to44", "45plus"], gentle: false, avoidInPregnancy: true },
   { id: "aha", name: "Glycolic / Lactic acid", aka: "AHA", type: "Exfoliating treatment",
     what: "A surface exfoliant that sweeps away dull, rough dead skin.",
     why: "Smooths texture and brings back brightness and even tone.",
     for: ["texture", "dullness", "darkspots", "smooth"], gentle: false },
   { id: "peptides", name: "Peptides", aka: "Signal peptides", type: "Firming serum",
     what: "Amino-acid messengers that prompt skin to firm and repair.",
-    why: "Supports bounce and resilience — gentle enough for most routines.",
-    for: ["firmness", "wrinkles", "40s", "50plus"], gentle: true },
+    why: "Supports bounce and resilience - gentle enough for most routines.",
+    for: ["firmness", "wrinkles", "35to44", "45plus"], gentle: true },
   { id: "ha", name: "Hyaluronic acid", aka: "Humectant", type: "Hydrating serum",
     what: "Draws water into the skin for instant plumping and comfort.",
     why: "Tops up hydration so skin looks fuller and feels less tight.",
@@ -51,12 +51,18 @@ export const ACTIVES: Active[] = [
     for: ["redness", "calm"], gentle: true },
   { id: "squalane", name: "Squalane", aka: "Lightweight emollient", type: "Facial oil",
     what: "A skin-like oil that softens and reinforces the barrier without grease.",
-    why: "Locks in moisture and comfort — ideal for dry or depleted skin.",
+    why: "Locks in moisture and comfort - ideal for dry or depleted skin.",
     for: ["dryness", "balance", "dry"], gentle: true },
 ];
 
+/** Sentence form, e.g. "Being 25 to 34, ..." (see `needsSummary`). */
 export const AGE_LABELS: Record<AgeId, string> = {
-  under20: "under 20", "20s": "in your 20s", "30s": "in your 30s", "40s": "in your 40s", "50plus": "50 or older",
+  under18: "under 18", "18to24": "18 to 24", "25to34": "25 to 34", "35to44": "35 to 44", "45plus": "45 or older",
+};
+
+/** Short form for the results chips, matching the quiz option labels. */
+export const AGE_CHIP_LABELS: Record<AgeId, string> = {
+  under18: "Under 18", "18to24": "18-24", "25to34": "25-34", "35to44": "35-44", "45plus": "45+",
 };
 
 export function recommendActives(profile: Profile, CONCERNS: Concern[], GOALS: Goal[]): ScoredActive[] {
@@ -157,29 +163,29 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
   // Minimal closes the morning with ONE moisturising sunscreen instead of a
   // moisturiser step followed by an SPF step; everything else keeps them separate.
   if (min) {
-    am.push({ type: MOISTURISING_SPF_STEP, active: "Broad-spectrum SPF 30–50", note: "Hydrates and protects in one — never skip it", spf: true });
+    am.push({ type: MOISTURISING_SPF_STEP, active: "Broad-spectrum SPF 30-50", note: "Hydrates and protects in one - never skip it", spf: true });
   } else {
     am.push({ type: moistAM, active: type === "dry" && ids.has("ceramides") ? "Ceramides" : null, note: "Locks in hydration" });
-    am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30–50", note: "Never skip — protects every result", spf: true });
+    am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30-50", note: "Never skip - protects every result", spf: true });
   }
 
   const amHasSPF = am.some((s) => s.spf);
   if (amHasSPF && !min) {
-    pm.push({ type: "Oil cleanser or balm", active: null, note: "First cleanse — melts away SPF, makeup and grime" });
-    pm.push({ type: cleanser, active: null, note: "Second cleanse — washes the skin underneath" });
+    pm.push({ type: "Oil cleanser or balm", active: null, note: "First cleanse - melts away SPF, makeup and grime" });
+    pm.push({ type: cleanser, active: null, note: "Second cleanse - washes the skin underneath" });
   } else {
     pm.push({ type: cleanser, active: null, note: "Remove the day gently" });
   }
 
   const exf = ids.has("salicylic")
-    ? { active: "Salicylic acid (BHA)", note: "Clears pores — 2–3 nights a week" }
+    ? { active: "Salicylic acid (BHA)", note: "Clears pores - 2-3 nights a week" }
     : ids.has("aha")
-    ? { active: "Glycolic / Lactic acid (AHA)", note: "Smooths and brightens — 2 nights a week" }
+    ? { active: "Glycolic / Lactic acid (AHA)", note: "Smooths and brightens - 2 nights a week" }
     : null;
   if (exf && !min) pm.push({ type: "Exfoliating treatment", active: exf.active, note: exf.note });
 
   if (ids.has("retinoid"))
-    pm.push({ type: "Renewing treatment", active: "Retinol / Retinoid", note: sensitive ? "Start 1–2 nights a week, buffer with moisturiser" : "Build to most nights — not the same night as acids" });
+    pm.push({ type: "Renewing treatment", active: "Retinol / Retinoid", note: sensitive ? "Start 1-2 nights a week, buffer with moisturiser" : "Build to most nights - not the same night as acids" });
   else if (ids.has("benzoyl") && !exf)
     pm.push({ type: "Spot treatment", active: "Benzoyl peroxide", note: "Dab on active breakouts only" });
 
@@ -192,10 +198,10 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
 
   const notes: string[] = [];
   if (["pregnant", "planning", "breastfeeding"].includes(profile.pregnancy ?? ""))
-    notes.push("We\u2019ve left out retinoids and other actives best avoided during pregnancy or nursing — always confirm with your doctor.");
-  if (ids.has("retinoid") && exf) notes.push("Alternate your retinoid and exfoliating acid on different nights — never both at once.");
-  if (sensitive) notes.push("Introduce one new active at a time and patch-test first — your skin reacts easily.");
-  notes.push("Give any new routine 6–8 weeks of consistency before judging results.");
+    notes.push("We\u2019ve left out retinoids and other actives best avoided during pregnancy or nursing - always confirm with your doctor.");
+  if (ids.has("retinoid") && exf) notes.push("Alternate your retinoid and exfoliating acid on different nights - never both at once.");
+  if (sensitive) notes.push("Introduce one new active at a time and patch-test first - your skin reacts easily.");
+  notes.push("Give any new routine 6-8 weeks of consistency before judging results.");
 
   // A minimal routine promises "2–3 steps" — hold it to that in both halves of
   // the day, even when several actives scored well.
@@ -215,7 +221,7 @@ export function needsSummary(profile: Profile, analysis: Analysis): { paragraph:
   }
   if (profile.age && AGE_LABELS[profile.age]) {
     lead += `Being ${AGE_LABELS[profile.age]}, ${
-      profile.age === "under20" || profile.age === "20s"
+      profile.age === "under18" || profile.age === "18to24"
         ? "prevention and gentle balance matter most right now."
         : "supporting firmness and renewal becomes increasingly worthwhile."
     }`;

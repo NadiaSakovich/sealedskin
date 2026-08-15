@@ -51,6 +51,29 @@ function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
+/** Em dash, en dash and the horizontal bar, all replaced by a plain hyphen. */
+const LONG_DASH_RE = /[—–―]/g;
+
+/**
+ * Models love an em dash, and readers read it as "written by an AI" - so all of
+ * our own copy uses plain hyphens, and the model's copy is normalised to match.
+ * `STYLE_RULES` in `agent.ts` asks for the same thing; this is the guarantee,
+ * the same prompt-plus-enforcement split as the region and minimal-shape rules.
+ *
+ * Applied to the whole output before anything else reads it, so step types stay
+ * consistent with the `productsByType` keys derived from them.
+ */
+function stripLongDashes<T>(value: T): T {
+  if (typeof value === "string") return value.replace(LONG_DASH_RE, "-") as T;
+  if (Array.isArray(value)) return value.map(stripLongDashes) as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = stripLongDashes(v);
+    return out as T;
+  }
+  return value;
+}
+
 /** A step is a lumped "double cleanse" if its type says so. */
 const DOUBLE_CLEANSE_RE = /double\s*cleans/i;
 /** Product names that read as an oil/balm (first) cleanser rather than a water-based one. */
@@ -93,8 +116,8 @@ function applyMinimalShape(
     ...routine.am.filter((s) => !isSpf(s) && !isMoisturiser(s)),
     {
       type: MOISTURISING_SPF_STEP,
-      active: spf?.active ?? "Broad-spectrum SPF 30–50",
-      note: "Hydrates and protects in one — never skip it",
+      active: spf?.active ?? "Broad-spectrum SPF 30-50",
+      note: "Hydrates and protects in one - never skip it",
       spf: true as const,
     },
   ];
@@ -155,11 +178,13 @@ function keepInRegion(p: ShopProduct, region: RegionId): ShopProduct | null {
 }
 
 export function buildAiResult(
-  output: AiRoutineOutput,
+  rawOutput: AiRoutineOutput,
   profile: Profile,
   analysis: Analysis,
   grounding?: GroundingInfo,
 ): RoutineResult {
+  const output = stripLongDashes(rawOutput);
+
   const picked: ScoredActive[] = output.ingredients.map((ing, i) => ({
     active: {
       // id is only used as a render key; synthesize a stable one.
@@ -225,8 +250,8 @@ export function buildAiResult(
     productsByType[WATER_CLEANSE_STEP] = picks.filter((p) => !OIL_CLEANSER_RE.test(p.name));
     delete productsByType[s.type];
     return [
-      { type: OIL_CLEANSE_STEP, active: null, note: "First cleanse — melts away SPF, makeup and the day's grime" },
-      { type: WATER_CLEANSE_STEP, active: null, note: "Second cleanse — washes the skin underneath" },
+      { type: OIL_CLEANSE_STEP, active: null, note: "First cleanse - melts away SPF, makeup and the day's grime" },
+      { type: WATER_CLEANSE_STEP, active: null, note: "Second cleanse - washes the skin underneath" },
     ];
   };
 

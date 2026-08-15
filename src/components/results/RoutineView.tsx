@@ -48,14 +48,14 @@ export function RoutineView({
   // A minimal routine keeps a single evening cleanse, so lead the "Good to know"
   // notes with the double-cleanse-after-SPF tip.
   const minimalCleanseTip =
-    "If you apply SPF in the morning, it’s worth double cleansing at night — first use an oil or balm cleanser to melt away sunscreen and grime, then your usual water-based cleanser.";
+    "If you apply SPF in the morning, it’s worth double cleansing at night - first use an oil or balm cleanser to melt away sunscreen and grime, then your usual water-based cleanser.";
   const notes = minimal ? [minimalCleanseTip, ...routine.notes] : routine.notes;
   return (
     <div className="py-0.5">
       <ResultsEyebrow step={3} />
       <h1 className={resHeadlineClass}>Your everyday routine</h1>
       <p className={resIntroClass}>
-        Apply each step in order, from top to bottom — lightest textures first, richest last. This is a template by
+        Apply each step in order, from top to bottom - lightest textures first, richest last. This is a template by
         product type and active, not specific brands.
       </p>
 

@@ -25,7 +25,7 @@ export interface Question {
   options: QuestionOption[];
 }
 
-export type AgeId = "under20" | "20s" | "30s" | "40s" | "50plus";
+export type AgeId = "under18" | "18to24" | "25to34" | "35to44" | "45plus";
 export type PregnancyId = "no" | "pregnant" | "planning" | "breastfeeding";
 
 export interface Concern {

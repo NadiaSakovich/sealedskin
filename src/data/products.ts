@@ -14,6 +14,19 @@ import type { Product, RegionId, RoutineStep } from "../types";
 // Toronto) not European, CeraVe is American even in its EU formulation, and Belif
 // is Korean (LG H&H) not American. The same rule is spelled out to the model in
 // `lib/ai/agent.ts` (REGION_RULES), which is the path users actually hit.
+
+/**
+ * The most a suggested product may cost (USD). SealedSkin is aimed at people
+ * building a first routine, where a $180 serum is noise rather than an option,
+ * so the "Premium" band is capped instead of open-ended.
+ *
+ * Enforced at render in `ShopView.resolve` - which covers saved routines and
+ * the offline catalog too - and asked for in both prompts in `lib/ai/agent.ts`.
+ * Same prompt-plus-enforcement split as the region rule: the prompt spends the
+ * model's three picks on products we'll actually show, the filter guarantees it.
+ */
+export const MAX_PRODUCT_PRICE = 80;
+
 export const PRODUCTS: Record<string, Product[]> = {
   "cleanser-gel": [
     { region: "asia", tier: "Budget", brand: "COSRX", name: "Low pH Good Morning Gel Cleanser", price: "$12" },
@@ -66,7 +79,6 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "us", tier: "Budget", brand: "The Ordinary", name: "Vitamin C Suspension 23%", price: "$8" },
     { region: "us", tier: "Mid", brand: "Maelove", name: "Glow Maker Vitamin C Serum", price: "$30" },
     { region: "us", tier: "Budget", brand: "TruSkin", name: "Vitamin C Serum", price: "$20" },
-    { region: "us", tier: "Premium", brand: "SkinCeuticals", name: "C E Ferulic", price: "$182" },
     { region: "eu", tier: "Budget", brand: "The INKEY List", name: "15% Vitamin C and EGF Serum", price: "$16" },
     { region: "eu", tier: "Mid", brand: "La Roche-Posay", name: "Pure Vitamin C10 Serum", price: "$40" },
     { region: "eu", tier: "Budget", brand: "Garnier", name: "Vitamin C Brightening Serum", price: "$15" },
@@ -114,7 +126,6 @@ export const PRODUCTS: Record<string, Product[]> = {
     { region: "us", tier: "Budget", brand: "The Ordinary", name: "Glycolic Acid 7% Toning Solution", price: "$13" },
     { region: "us", tier: "Budget", brand: "Good Molecules", name: "Daily Glycolic Toner", price: "$9" },
     { region: "us", tier: "Budget", brand: "Naturium", name: "Glycolic Acid 12% Exfoliating Serum", price: "$20" },
-    { region: "us", tier: "Premium", brand: "Drunk Elephant", name: "T.L.C. Framboos Glycolic Serum", price: "$90" },
     { region: "eu", tier: "Budget", brand: "Nip+Fab", name: "Glycolic Fix Liquid Glow", price: "$15" },
     { region: "eu", tier: "Mid", brand: "Pixi", name: "Glow Tonic", price: "$29" },
     { region: "eu", tier: "Premium", brand: "REN", name: "Ready Steady Glow Daily AHA Tonic", price: "$39" },

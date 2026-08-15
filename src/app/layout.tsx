@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SealedSkin — Build your skincare routine",
+  title: "SealedSkin - Build your skincare routine",
   description:
     "A guided quiz that analyzes your skin and builds a personalized AM/PM skincare routine.",
 };

@@ -10,23 +10,23 @@ const TYPE_METERS: Record<string, { oil: number; dryness: number }> = {
 };
 
 const TYPE_PROSE: Record<string, string> = {
-  dry: "Your answers point to dry skin. It produces little excess oil, which keeps shine and visible pores to a minimum — but it also means moisture escapes easily, so skin can feel tight, look a little dull, or flake, especially after cleansing or in cold, dry air.",
-  normal: "Your answers read as fairly normal, balanced skin. It isn\u2019t especially oily or dry, pores stay modest, and it generally tolerates products well — a stable, forgiving base that most routines can build on.",
-  combination: "Your answers point to combination skin. The T-zone — forehead, nose and chin — runs oilier and shinier, while your cheeks sit drier and more comfortable. That split is completely normal; it simply means different zones of your face want slightly different care.",
-  oily: "Your answers point to oily skin. The oil glands are quite active, so shine returns through the day, pores look more visible, and skin can lean toward congestion — but that same oil keeps skin supple and tends to slow the look of fine lines over time.",
+  dry: "Your answers point to dry skin. It produces little excess oil, which keeps shine and visible pores to a minimum - but it also means moisture escapes easily, so skin can feel tight, look a little dull, or flake, especially after cleansing or in cold, dry air.",
+  normal: "Your answers read as fairly normal, balanced skin. It isn\u2019t especially oily or dry, pores stay modest, and it generally tolerates products well - a stable, forgiving base that most routines can build on.",
+  combination: "Your answers point to combination skin. The T-zone - forehead, nose and chin - runs oilier and shinier, while your cheeks sit drier and more comfortable. That split is completely normal; it simply means different zones of your face want slightly different care.",
+  oily: "Your answers point to oily skin. The oil glands are quite active, so shine returns through the day, pores look more visible, and skin can lean toward congestion - but that same oil keeps skin supple and tends to slow the look of fine lines over time.",
 };
 
 const TYPE_SUBHEAD: Record<string, string> = {
-  dry: "Low oil, low moisture retention — comfort and hydration are the priority.",
-  normal: "Well balanced and resilient — easy to keep healthy.",
-  combination: "An oilier T-zone with drier cheeks — it wants balance, not extremes.",
-  oily: "Active oil and visible pores — clarity and balance are the priority.",
+  dry: "Low oil, low moisture retention - comfort and hydration are the priority.",
+  normal: "Well balanced and resilient - easy to keep healthy.",
+  combination: "An oilier T-zone with drier cheeks - it wants balance, not extremes.",
+  oily: "Active oil and visible pores - clarity and balance are the priority.",
 };
 
 const SENS_PROSE: Record<string, string> = {
-  high: "Your skin is also quite reactive — redness, stinging or tightness come on easily, a sign the barrier is working overtime. Gentle, low-fragrance formulas and a slow, one-at-a-time approach to active ingredients will matter a lot for you.",
-  moderate: "Your skin reacts now and then to new products, so patch-testing and introducing stronger actives one at a time is wise — but you have reasonable tolerance overall.",
-  low: "Reassuringly, your skin rarely reacts, which gives you room to use more active ingredients — though it\u2019s still smart to introduce them gradually so you can spot what works.",
+  high: "Your skin is also quite reactive - redness, stinging or tightness come on easily, a sign the barrier is working overtime. Gentle, low-fragrance formulas and a slow, one-at-a-time approach to active ingredients will matter a lot for you.",
+  moderate: "Your skin reacts now and then to new products, so patch-testing and introducing stronger actives one at a time is wise - but you have reasonable tolerance overall.",
+  low: "Reassuringly, your skin rarely reacts, which gives you room to use more active ingredients - though it\u2019s still smart to introduce them gradually so you can spot what works.",
 };
 
 const CONCERN_NOTES: Record<string, string> = {
@@ -103,7 +103,7 @@ export function analyzeSkin(
   if (md) behaviourBits.push(`by midday it\u2019s \u201c${md}\u201d`);
   if (eod) behaviourBits.push(`and by evening it looks \u201c${eod}\u201d`);
   const behaviour = behaviourBits.length
-    ? `In your own words, ${behaviourBits.join(", ")} — a pattern that fits ${typeLabel.toLowerCase()} skin well.`
+    ? `In your own words, ${behaviourBits.join(", ")} - a pattern that fits ${typeLabel.toLowerCase()} skin well.`
     : "";
 
   const chosen = CONCERNS.filter((c) => concernIds.includes(c.id));
@@ -119,21 +119,21 @@ export function analyzeSkin(
       const labels = tops.map((c) => c.label.toLowerCase());
       const last = labels[labels.length - 1];
       const head = labels.slice(0, -1).join(", ");
-      s += `Front of mind are ${head} and ${last} — ${CONCERN_NOTES[tops[0].id] || "the priorities we'll lead with"}.`;
+      s += `Front of mind are ${head} and ${last} - ${CONCERN_NOTES[tops[0].id] || "the priorities we'll lead with"}.`;
     } else if (tops.length === 1) {
-      s += `Front of mind is ${tops[0].label.toLowerCase()} — ${CONCERN_NOTES[tops[0].id] || "a key focus for you"}.`;
+      s += `Front of mind is ${tops[0].label.toLowerCase()} - ${CONCERN_NOTES[tops[0].id] || "a key focus for you"}.`;
     }
     if (others.length === 1) {
       s += ` You also pointed to ${others[0].label.toLowerCase()}, ${CONCERN_NOTES[others[0].id] || ""}.`;
     } else if (others.length > 1) {
       const list = others.map((c) => c.label.toLowerCase());
       const last = list.pop();
-      s += ` You also flagged ${list.join(", ")} and ${last} — all common companions to this skin type, and all very workable.`;
+      s += ` You also flagged ${list.join(", ")} and ${last} - all common companions to this skin type, and all very workable.`;
     }
     concernsPara = s;
   } else {
     concernsPara =
-      "You didn\u2019t flag any specific concerns, which suggests your skin is in a fairly good place — so your routine can focus on maintaining its health and protecting it day to day.";
+      "You didn\u2019t flag any specific concerns, which suggests your skin is in a fairly good place - so your routine can focus on maintaining its health and protecting it day to day.";
   }
 
   const needs: string[] = [];
