@@ -158,7 +158,16 @@ export default function SkinQuiz() {
   // What was last successfully saved from this screen. The save panel lives on
   // the shop step, so leaving it (Back to the routine screen) and coming back
   // remounts it — without this it would forget the save and offer it again.
-  const [savedMark, setSavedMark] = useState<{ rebuildCount: number; submission: QuizSubmission } | null>(null);
+  // `created` = that save made a new routine (POST) rather than updating one.
+  const [savedMark, setSavedMark] = useState<
+    { rebuildCount: number; submission: QuizSubmission; created: boolean } | null
+  >(null);
+  // The routine a *fresh* quiz created here, from the id POST /api/users returns.
+  // Rebuilding after saving (e.g. a model switch) then updates that routine in
+  // place instead of stranding a stale "Saved ✓" or saving a second copy. Kept
+  // apart from `editingId` on purpose: this only aims the save panel, it does
+  // not turn the finale into a review hub or add the back-to-account header.
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   // Pick the intro hero on mount (client-only) so each visit can differ; the server
   // always renders index 0, so this avoids an SSR/CSR hydration mismatch.
@@ -399,15 +408,21 @@ export default function SkinQuiz() {
 
   const currentSubmission: QuizSubmission = { answers, concerns, topConcerns, commitment, region };
 
-  // Have the answers drifted from the saved routine we opened? Drives both the
-  // finale "rebuild vs show" CTA and whether the shop page offers to save changes.
+  // The saved routine later saves update in place: one opened from the account,
+  // or one this session created. Either way there is a stored copy to compare to.
+  const updateId = editingId ?? createdId;
+  // That stored copy's answers — the routine we opened, or what we last saved.
+  const savedBaseline = editOriginal ?? savedMark?.submission ?? null;
+
+  // Have the answers drifted from the saved routine? Drives both the finale
+  // "rebuild vs show" CTA and whether the shop page offers to save changes.
   const reviewChanged =
-    editingId && editOriginal ? submissionChanged(editOriginal, currentSubmission) : false;
+    updateId && savedBaseline ? submissionChanged(savedBaseline, currentSubmission) : false;
 
   // The other way a saved routine can drift from its stored copy: it was rebuilt
   // (a model switch, or a rebuild from the finale) while the answers stayed the
   // same. The result is a different routine, so it's offered for saving too.
-  const reviewRebuilt = !!editingId && rebuildCount > 0;
+  const reviewRebuilt = !!updateId && rebuildCount > 0;
 
   // Is what's on screen exactly what we last saved? Same routine version (no
   // rebuild since) and the same answers. If so the save panel shows its
@@ -728,23 +743,29 @@ export default function SkinQuiz() {
             regionLabel={profile.regionLabel}
             productsByType={result.productsByType}
             onBack={() => go(R_ROUTINE, "back")}
-            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setReviewEditing(false); setRebuildCount(0); setSavedMark(null); go(0, "back"); }}
-            // Fresh quiz → offer to save. Reviewing a saved routine → only offer
-            // to save when it actually differs from the stored copy: the answers
-            // changed, or the routine was rebuilt (e.g. with another model). A
-            // pure review needs no save. The key resets the panel after each
-            // rebuild so a second regeneration can be saved in turn; `saved`
-            // keeps the confirmation after leaving and re-entering this screen,
-            // so an already-saved version is never offered for saving twice.
+            onRestart={() => { setAnswers({}); setConcerns([]); setTopConcerns([]); setCommitment(null); setRegion(null); setAiResult(null); setAiError(null); setEditingId(null); setEditOriginal(null); setCreatedId(null); setReviewEditing(false); setRebuildCount(0); setSavedMark(null); go(0, "back"); }}
+            // Not yet stored anywhere → offer to save. Once there is a stored
+            // copy (opened from the account, or saved here) → only offer to save
+            // when the screen differs from it: the answers changed, or the
+            // routine was rebuilt (e.g. with another model). A pure review needs
+            // no save. The key resets the panel after each rebuild so a second
+            // regeneration can be saved in turn; `saved` keeps the confirmation
+            // after leaving and re-entering this screen, so an already-saved
+            // version is never offered for saving twice.
             saveSlot={
-              !editingId || reviewChanged || reviewRebuilt
+              !updateId || reviewChanged || reviewRebuilt || alreadySaved
                 ? <SaveRoutine
-                    key={`save-${editingId ?? "new"}-${editingId ? rebuildCount : 0}`}
+                    key={`save-${rebuildCount}`}
                     payload={savePayload}
-                    editId={editingId ?? undefined}
+                    editId={updateId ?? undefined}
                     rebuiltOnly={reviewRebuilt && !reviewChanged}
                     saved={alreadySaved}
-                    onSaved={() => setSavedMark({ rebuildCount, submission: currentSubmission })}
+                    savedAsNew={alreadySaved && savedMark?.created === true}
+                    onSaved={(newId) => {
+                      setSavedMark({ rebuildCount, submission: currentSubmission, created: !updateId });
+                      // A create: keep the id so a rebuild updates this routine.
+                      if (!updateId && newId) setCreatedId(newId);
+                    }}
                   />
                 : undefined
             }
