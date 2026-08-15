@@ -70,8 +70,10 @@ const OUTPUT_SCHEMA = {
 } as const;
 
 // Shared safety rules, applied in both steps so the grounded research is safe
-// and the structuring step preserves that safety.
-const SAFETY_RULES = `Safety rules:
+// and the structuring step preserves that safety. Exported because the chat
+// agent (`lib/ai/chat.ts`) discusses the SAME routine and must hold to the same
+// rules — a rule that lives in one prompt only is a rule the other path breaks.
+export const SAFETY_RULES = `Safety rules:
 - The user's skin type and sensitivity are already determined — respect them.
 - ALWAYS include sunscreen in the morning and a hydrator somewhere.
 - If the user is pregnant, planning, or breastfeeding, EXCLUDE retinoids and \
@@ -87,7 +89,7 @@ brief note that this is general guidance, not medical advice.`;
  * a wasted pick, since `ShopView` drops anything over the cap at render. Hence
  * telling the model up front, so all three picks per step are usable.
  */
-const PRICE_RULES = `Price limit:
+export const PRICE_RULES = `Price limit:
 - NEVER suggest a product that costs more than $${MAX_PRODUCT_PRICE} (USD, or the local \
 equivalent). This is a hard limit - a pricier product is not an option for this \
 audience, however good it is.
@@ -102,7 +104,7 @@ $35-$${MAX_PRODUCT_PRICE}), NOT luxury skincare.
  * `stripLongDashes()` in `lib/ai/result.ts` enforces it deterministically -
  * prompt for the habit, enforce for the guarantee.
  */
-const STYLE_RULES = `Writing style:
+export const STYLE_RULES = `Writing style:
 - Write plainly, the way a knowledgeable person would talk, not like marketing copy.
 - Use ONLY the plain hyphen "-" for punctuation. NEVER use an em dash or an en \
 dash. Prefer a comma, a full stop or brackets where you would reach for one.
@@ -119,7 +121,7 @@ dash. Prefer a comma, a full stop or brackets where you would reach for one.
  * option exists" escape hatch is replaced by "say so" — the shop UI already
  * renders a step with no picks rather than hiding it.
  */
-const REGION_RULES = `Regional preference — apply this literally:
+export const REGION_RULES = `Regional preference — apply this literally:
 The user's region preference is about where the BRAND ITSELF originates — the \
 country the brand was founded in and is identified with. It is NOT about where a \
 product can be bought. Almost every well-known brand is sold worldwide, so \
@@ -318,7 +320,7 @@ export async function buildRoutine(
     temperature: 0.2,
     responseSchema: OUTPUT_SCHEMA as unknown as Record<string, unknown>,
     // Structuring is mechanical — no deep reasoning needed, so keep thinking as
-    // low as the model allows. NOT 0: gemini-3.5-flash-lite and gemini-3.6-flash
+    // low as the model allows. NOT 0: gemini-3.5-flash-lite and gemini-3.7-flash
     // reject `thinkingBudget: 0` with a 400 (thinking can't be switched off on
     // them); 1 is the minimum they accept and is effectively the same thing.
     thinkingBudget: MIN_THINKING_BUDGET,

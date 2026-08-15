@@ -11,6 +11,7 @@ import { anonHeaders } from "../../lib/anonId";
 import { reportClientError } from "../../lib/clientLog";
 import { Button } from "../ui/Button";
 import { Arrow } from "../ui/Arrow";
+import { RoutineChat } from "./RoutineChat";
 import type { SavedResult } from "./types";
 
 interface SavedQuiz {
@@ -84,6 +85,8 @@ export function ProfileView() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingMainId, setSettingMainId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** Id of the routine whose "Discuss with AI" window is open, if any. */
+  const [chatId, setChatId] = useState<string | null>(null);
 
   // Await before the first setState so this is safe to call straight from an
   // effect (no synchronous cascading render).
@@ -236,6 +239,9 @@ export function ProfileView() {
   }
 
   const quizzes = data?.quizzes ?? [];
+  // Resolved from the list, not held in state, so a routine that disappears
+  // (deleted, or refreshed away) takes its chat window with it.
+  const chatRoutine = quizzes.find((q) => q.id === chatId) ?? null;
   const displayName = data?.profile.displayName ?? user.displayName ?? "Your account";
   const email = data?.profile.email ?? user.email ?? null;
   const photoURL = data?.profile.photoURL ?? user.photoURL ?? null;
@@ -375,7 +381,10 @@ export function ProfileView() {
                 </div>
                 <div className="flex items-center justify-between gap-2 px-[18px] py-[9px] border-t border-ss-hairline">
                   {q.isMain ? (
-                    <span className="inline-flex items-center gap-[6px] font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-on-accent bg-ss-accent px-[9px] py-[3px] rounded-full">
+                    // `h-[22px]` is shared with the "Discuss with AI" pill opposite
+                    // it, so the two sit on one line and the main card's footer is
+                    // the same height as the secondary cards'.
+                    <span className="inline-flex items-center gap-[6px] h-[22px] font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-accent-ink bg-ss-accent-tint px-[9px] rounded-full">
                       <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
                         <path d="M6 1l1.5 3.2 3.5.4-2.6 2.4.7 3.5L6 9.2 2.9 10.9l.7-3.5L1 5l3.5-.4z" />
                       </svg>
@@ -386,7 +395,25 @@ export function ProfileView() {
                       Secondary routine
                     </span>
                   )}
-                  {!q.isMain && (
+                  {q.isMain ? (
+                    // The main routine's headline action. Deliberately the only
+                    // filled pill in the list - "Set as main" below is a quiet
+                    // text link, so this reads as the thing to press.
+                    <button
+                      type="button"
+                      onClick={() => setChatId(q.id)}
+                      disabled={!q.result}
+                      // Same type treatment as the badge opposite it (mono, caps,
+                      // 22px tall); the accent FILL is what sets it apart, not
+                      // a different typeface or size.
+                      className="inline-flex items-center gap-[6px] h-[22px] px-[11px] rounded-full border-none bg-ss-accent text-ss-on-accent font-mono text-[10.5px] tracking-[0.08em] uppercase whitespace-nowrap cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.1a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 8.9 7.4z" />
+                      </svg>
+                      Discuss with AI
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       onClick={() => handleSetMain(q.id)}
@@ -401,6 +428,15 @@ export function ProfileView() {
             );
           })}
         </ul>
+      )}
+
+      {chatRoutine && (
+        <RoutineChat
+          quizId={chatRoutine.id}
+          title={skinTypeLabel(chatRoutine)}
+          subtitle={commitmentLabel(chatRoutine)}
+          onClose={() => setChatId(null)}
+        />
       )}
     </div>
   );
