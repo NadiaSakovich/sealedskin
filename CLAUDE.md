@@ -212,8 +212,9 @@ in Stage 3, not Stage 1 — `SkinQuiz` splits `SKIN_QS` (everything except pregn
 - **API (`route.ts`, all token-verified via `authedUid`):** `GET` returns `{ profile, quizzes }` —
   the user's saved quizzes from `users/{uid}/quizzes`, newest first, with the Firestore `createdAt`
   Timestamp converted to **epoch millis** (serializable) and an `isMain` boolean per quiz. `POST`
-  creates a new saved routine; `PUT` (body carries `id`) **updates one in place** (used when editing
-  a saved routine); `PATCH` (body carries `id`) **sets that routine as the single main routine**
+  creates a new saved routine and **returns its `quizId`**, which the client keeps so a later rebuild
+  updates that routine rather than creating a second one; `PUT` (body carries `id`) **updates one in
+  place** (used when editing a saved routine); `PATCH` (body carries `id`) **sets that routine as the single main routine**
   (clears `isMain` on all others in one batch); `DELETE` (`?id=` query param) removes one. All go
   through the Admin SDK server-side, so `firestore.rules` stays **deny-all** (no client Firestore
   access).
@@ -273,21 +274,40 @@ PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on 
      stale even though `submissionChanged` is false. Counts the AI-failure path too, since the stored
      result still changes (to a locally built one).
 
-  The Shop page offers to save when `!editingId || reviewChanged || reviewRebuilt`. A pure review
-  (nothing changed, nothing rebuilt) shows **no** save section; a fresh quiz always shows "Save your
-  routine". Both saved-routine cases PUT (update in place) — only the wording differs, via
-  `SaveRoutine`'s `rebuiltOnly` prop: "Save this version / You just rebuilt this routine…" instead of
-  "Save your changes". `SaveRoutine` is **keyed by `rebuildCount`** while editing, so its internal
-  "Updated ✓" state resets on each rebuild and a second regeneration can be saved in turn.
+  The Shop page offers to save when `!updateId || reviewChanged || reviewRebuilt || alreadySaved`. A
+  pure review (nothing changed, nothing rebuilt) shows **no** save section; a quiz with nothing stored
+  yet always shows "Save your routine". Both saved-routine cases PUT (update in place) — only the
+  wording differs, via `SaveRoutine`'s `rebuiltOnly` prop: "Save this version / You just rebuilt this
+  routine…" instead of "Save your changes". `SaveRoutine` is **keyed by `rebuildCount`**, so its
+  internal "Updated ✓" state resets on each rebuild and a second regeneration can be saved in turn.
   `rebuildCount` resets on "Start over".
+
+  Both comparisons run against **the stored copy**, which is not always the routine we opened:
+  `updateId = editingId ?? createdId` and `savedBaseline = editOriginal ?? savedMark.submission`
+  (see "A freshly saved routine is updatable too" below).
 - **The save confirmation survives leaving the shop screen.** "Updated ✓" used to be purely internal
   to `SaveRoutine`, so stepping Back to the routine screen and returning via "See recommended
   products" remounted it in `idle` and re-offered "Update my routine" for an already-saved version.
-  `SkinQuiz` now remembers what was saved (`savedMark = { rebuildCount, submission }`, set from
-  `SaveRoutine`'s `onSaved`) and passes `saved={alreadySaved}` — true only while neither a rebuild
+  `SkinQuiz` now remembers what was saved (`savedMark = { rebuildCount, submission, created }`, set
+  from `SaveRoutine`'s `onSaved`) and passes `saved={alreadySaved}` — true only while neither a rebuild
   nor an answer change has happened since. The panel keeps showing the confirmation instead; a
   further rebuild or edit flips it back to offering the save. Cleared on "Start over". Same guard
   applies to a fresh quiz, so a saved routine isn't POSTed twice by walking back and forth.
+- **A freshly saved routine is updatable too.** `POST /api/users` returns `{ ok, quizId }`;
+  `SaveRoutine` reads that id off the response and hands it up as `onSaved(newId)`. `SkinQuiz` keeps
+  it as **`createdId`**, so rebuilding after a save (a model switch, say) offers "Save this version →
+  **Update my routine**" and PUTs that routine, instead of stranding a stale "Saved ✓" or saving a
+  second copy against the 3-routine cap. Details that matter:
+  - `createdId` is deliberately **separate from `editingId`**. `editingId` means "opened from the
+    account" and also switches the finale into the review hub and adds the header's "← Back to my
+    account"; a fresh quiz that merely got saved should not change shape mid-flow. Only the save
+    panel reads the union, `updateId = editingId ?? createdId`.
+  - `savedMark.created` records that the stored copy was **created** here, so the confirmation reads
+    "Saved ✓ / Your routine is saved to your account" rather than "Updated ✓" — `editId` is set by
+    then, so `editing` alone would report the wrong thing. It reaches `SaveRoutine` as `savedAsNew`.
+  - `reviewChanged` compares against `savedBaseline = editOriginal ?? savedMark.submission`, so an
+    edit made *after* saving a fresh quiz is measured against what was actually stored.
+  - Cleared on "Start over" alongside `editingId`/`savedMark`/`rebuildCount`.
 - **`Shell` gains `onBackToProfile`** — while editing a saved routine (`editingId` set), every quiz
   and results screen shows a persistent "← Back to profile" link in the header band.
 - **Profile photo** uses a plain `<img>` (Google `lh3.googleusercontent.com` avatar, with an
@@ -483,6 +503,28 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 - Playwright in `/tmp/ss-pw/` can get corrupted (missing `package.json`); if `import` fails, just
   re-run `npm i playwright` there. Soft (Link) navigations need `waitForURL`, not bare `p.url()`.
 - After a change, run `npx tsc --noEmit` and a screenshot drive; check `console --errors`.
+- **`CONFIG.autoAdvance` is `false`**, so a driver must click an answer card *and then* the Continue
+  CTA. Also drive with `:visible` selectors — during a `Screen` transition the outgoing screen's
+  buttons are still in the DOM, and `.first()` will happily click one of those.
+
+### Driving the signed-in flow (no Google popup)
+
+The Google sign-in popup can't be automated, but Firebase restores its session from **IndexedDB**, so
+a fake one can be seeded before the app loads (`context.addInitScript`) and the whole authenticated
+client path drives normally:
+
+- DB `firebaseLocalStorageDb` → store `firebaseLocalStorage` (keyPath `fbase_key`) → record
+  `{ fbase_key: "firebase:authUser:<NEXT_PUBLIC_FIREBASE_API_KEY>:[DEFAULT]", value: <user> }`.
+- **`value` must be the user OBJECT, not a JSON string** — the IndexedDB persistence layer stores a
+  structured clone (only the localStorage fallback stringifies). Getting this wrong fails silently:
+  the app just renders as signed out.
+- The user needs `uid`, `apiKey`, `appName: "[DEFAULT]"`, `providerData`, and a `stsTokenManager`
+  with a **future `expirationTime`** — then `getIdToken()` returns the stub token without a network
+  round trip. Stub `**/identitytoolkit.googleapis.com/**` + `**/securetoken.googleapis.com/**` anyway
+  so a background refresh can't sign the fake user out.
+- Then `page.route("**/api/users**")` fulfils the save requests and lets you assert the method/body
+  (POST without an id → PUT carrying the returned `quizId`). The **server** is stubbed out this way,
+  so this proves the client contract only, not token verification or the Firestore writes.
 
 ## Repository & git
 
@@ -700,6 +742,18 @@ Google Chrome** from a throwaway dir to keep project deps clean:
     - Handy: SSR-rendering a component in a unit test works with the same
       `npx --yes tsx <script>.tsx` trick, but the script must sit **in the repo root** — from the
       scratchpad, Node can't resolve `react-dom/server`.
+26. **A freshly saved routine can be updated in place (this session):** `SaveRoutine` now reads the
+    `quizId` that `POST /api/users` already returned and hands it up via `onSaved(newId)`; `SkinQuiz`
+    keeps it as `createdId`, so rebuilding after a save PUTs that routine instead of leaving a stale
+    "Saved ✓" (see "A freshly saved routine is updatable too"). Kept `createdId` separate from
+    `editingId` so a fresh quiz doesn't turn into the review hub mid-flow; added `savedMark.created`
+    → `savedAsNew` so the first save still reads "Saved ✓", not "Updated ✓".
+    - Verified with a **fake Firebase session + stubbed `/api/users`** (new technique, documented
+      under "Driving the signed-in flow"): a live-AI fresh quiz → "Save your routine" → POST (no id)
+      → "Saved ✓" → model switch → "Save this version / Update my routine" → **PUT with the returned
+      id** → "Updated ✓". Repeated twice, identical. The review-hub path was regression-driven from
+      the same fixture: a pure review still shows **no** save panel and issues **0** writes, and a
+      rebuild there still offers "Save this version" → PUT. 0 console errors in both.
 
 ## Likely next steps
 
@@ -708,14 +762,10 @@ Google Chrome** from a throwaway dir to keep project deps clean:
 - Add an explicit **account-creation prompt** after results (the pieces exist — auth + `SaveRoutine`
   + the `/profile` page — but there's no dedicated "save & track vs. continue without an account"
   moment yet).
-- **E2E-test the signed-in flow** end-to-end (save a routine; open it → review hub → review / edit /
-  rebuild / show / update-in-place / delete / back-to-profile). The review hub itself is now driven
-  in tests via the `ss-edit-quiz` sessionStorage seed (see the E2E note above), so what's left
-  unverified is specifically the **authenticated write path** — the POST/PUT/PATCH/DELETE round trips.
-- Consider having `POST /api/users` **return the new routine id** so `SaveRoutine` can hand it back to
-  `SkinQuiz` as `editingId`. Then a fresh quiz that's saved and then rebuilt (e.g. model switch) could
-  offer to *update* that routine instead of leaving a stale "Saved ✓" panel — today only *reopened*
-  saved routines get the regenerate-and-save treatment.
+- **E2E-test the signed-in flow against the real server** (PATCH set-main and DELETE especially).
+  The client side of save/update is now driven in tests with a **stubbed** `/api/users` and a fake
+  Firebase session (see "Driving the signed-in flow" below); what stays unverified is the server
+  half — real token verification, the 3-routine cap, `isMain` promotion and delete.
 - Consider giving saved routines **persisted, user-editable names** (currently the "Routine N" label
   is derived from list position, not stored). (A **delete** action now exists.)
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.

@@ -24,20 +24,27 @@ type Status = "idle" | "saving" | "saved" | "error" | "limit";
  *
  * `saved` says this exact version is already stored (the parent remembers it, so
  * the confirmation survives leaving and re-entering the shop screen); `onSaved`
- * reports a successful save back up so the parent can remember it.
+ * reports a successful save back up, with the new routine's id on a create, so
+ * the parent can remember it and point later saves at that same routine.
+ *
+ * `savedAsNew` marks a stored copy this session *created* (rather than updated),
+ * so the confirmation reads "Saved" even though `editId` is now set — adopting
+ * the new id is what lets a later rebuild update it in place.
  */
 export function SaveRoutine({
   payload,
   editId,
   rebuiltOnly = false,
   saved = false,
+  savedAsNew = false,
   onSaved,
 }: {
   payload: SaveQuizRequest;
   editId?: string;
   rebuiltOnly?: boolean;
   saved?: boolean;
-  onSaved?: () => void;
+  savedAsNew?: boolean;
+  onSaved?: (newId?: string) => void;
 }) {
   const { user } = useAuth();
   const [status, setStatus] = useState<Status>(saved ? "saved" : "idle");
@@ -70,8 +77,11 @@ export function SaveRoutine({
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `Save failed (${res.status})`);
       }
+      // A create returns the new routine's id; hand it up so the parent can aim
+      // later saves at this routine instead of creating a second one.
+      const data = (await res.json().catch(() => ({}))) as { quizId?: string };
       setStatus("saved");
-      onSaved?.();
+      onSaved?.(data.quizId);
     } catch (err) {
       // User dismissed the Google popup — not an error, just reset.
       if ((err as { code?: string }).code === POPUP_CLOSED) {
@@ -107,14 +117,16 @@ export function SaveRoutine({
     return (
       <div className="mt-7 rounded-[14px] border border-ss-hairline bg-ss-accent-tint px-[18px] py-[15px] text-center">
         <p className="font-head font-semibold text-[16px] text-ss-accent-ink m-0">
-          {editing ? "Updated ✓" : "Saved ✓"}
+          {editing && !savedAsNew ? "Updated ✓" : "Saved ✓"}
         </p>
         <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mt-1 [text-wrap:pretty]">
-          {regenerated
-            ? "This routine now holds the version you just generated. Find it any time in your account."
-            : editing
-              ? "Your changes are saved to this routine. Find it any time in your account."
-              : "Your routine is saved to your account. Sign in again any time to pick it back up."}
+          {savedAsNew
+            ? "Your routine is saved to your account. Sign in again any time to pick it back up."
+            : regenerated
+              ? "This routine now holds the version you just generated. Find it any time in your account."
+              : editing
+                ? "Your changes are saved to this routine. Find it any time in your account."
+                : "Your routine is saved to your account. Sign in again any time to pick it back up."}
         </p>
       </div>
     );
