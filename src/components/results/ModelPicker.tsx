@@ -6,7 +6,7 @@
 
 export const AI_MODELS = [
   { id: "gemini-3.5-flash-lite", label: "3.5 Flash-Lite" },
-  { id: "gemini-3.6-flash", label: "3.6 Flash" },
+  { id: "gemini-3.7-flash", label: "3.7 Flash" },
 ];
 
 export const DEFAULT_AI_MODEL = AI_MODELS[0].id;

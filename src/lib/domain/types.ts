@@ -137,6 +137,34 @@ export interface AiRoutineOutput {
   products: AiShopProduct[];
 }
 
+/* -------------------------------------------------------------------------- */
+/* Routine chat contract                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One turn of the "Discuss with AI" conversation about a saved routine, stored
+ * under `users/{uid}/quizzes/{quizId}/chat`. `grounding` is kept per assistant
+ * turn because Google's grounding terms require the sources and Search
+ * Suggestions chip to be shown wherever that answer is shown - including when a
+ * stored conversation is reloaded.
+ */
+export interface RoutineChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  /** `GroundingInfo` from `lib/ai/types`, kept `unknown` so persistence stays decoupled. */
+  grounding?: unknown;
+  /** Epoch millis; null while the server timestamp has not resolved yet. */
+  createdAt: number | null;
+}
+
+/** Body of `POST /api/routine-chat`. */
+export interface RoutineChatRequest {
+  /** Which saved routine to discuss. Must belong to the caller. */
+  quizId: string;
+  message: string;
+}
+
 /** The structured routine the AI agent produces from a user's answers. */
 export interface SkincareRoutine {
   /** e.g. "Combination, dehydrated". */

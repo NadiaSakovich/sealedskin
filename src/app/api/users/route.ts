@@ -197,6 +197,17 @@ export async function DELETE(req: Request) {
     const doomed = await quizzesRef.doc(id).get();
     const wasMain = doomed.exists && doomed.data()?.isMain === true;
 
+    // Firestore does NOT delete subcollections along with their parent document,
+    // so the "Discuss with AI" transcript has to go explicitly. Otherwise the
+    // messages orphan, and a routine that reused this id would open onto someone
+    // else's old conversation.
+    const chat = await quizzesRef.doc(id).collection("chat").get();
+    if (!chat.empty) {
+      const batch = adminDb().batch();
+      chat.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
     await quizzesRef.doc(id).delete();
 
     // Keep exactly one main: if the deleted routine was main, promote the newest
@@ -209,7 +220,13 @@ export async function DELETE(req: Request) {
         promotedId = rest.docs[0].id;
       }
     }
-    logger.info("users.delete", { ...user, quizId: id, wasMain, promotedId });
+    logger.info("users.delete", {
+      ...user,
+      quizId: id,
+      wasMain,
+      promotedId,
+      chatMessagesDeleted: chat.size,
+    });
     await flushLogs();
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -15,7 +15,7 @@ import { optionalUser } from "@/lib/firebase/optionalUser";
 // Node runtime (longer timeouts, full fetch), not the edge runtime.
 export const runtime = "nodejs";
 
-// The two-step grounded pipeline takes ~11s (3.5-flash-lite) to ~18s (3.6-flash),
+// The two-step grounded pipeline takes ~12s (3.5-flash-lite) to ~13s (3.7-flash),
 // so this route needs a much longer budget than a normal request. Pinned
 // explicitly rather than relying on the host's default, which has changed
 // before; 60s leaves headroom without letting a wedged call hang for minutes.
@@ -27,7 +27,7 @@ export const maxDuration = 60;
  * Models the UI is allowed to request. Anything else falls back to the env /
  * provider default — the client can't make us call an arbitrary model.
  */
-const ALLOWED_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+const ALLOWED_MODELS = ["gemini-3.5-flash-lite", "gemini-3.7-flash"];
 
 /** Pull a couple of answers worth logging, without dumping the whole quiz. */
 function answerSummary(answers: QuizAnswer[]) {

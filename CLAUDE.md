@@ -99,9 +99,10 @@ in one call** — with `google_search` on, the JSON gets corrupted (e.g. the arr
 
 The grounding shown in the UI comes from step 1; the structured routine comes from step 2.
 
-**Latency/behaviour observed:** `gemini-3.5-flash-lite` (default) ≈11s and *does* ground (≈5 sources
-+ chip — an improvement on the old `3.1-flash-lite`, which usually returned 0); `gemini-3.6-flash`
-≈18s with the 512 cap and grounds more richly (≈13 sources + chip). Grounding is non-deterministic — the model decides per request. **Skin-type analysis stays
+**Latency/behaviour observed:** `gemini-3.5-flash-lite` (default) ≈11-12s and *does* ground (≈2-8
+sources + chip — an improvement on the old `3.1-flash-lite`, which usually returned 0);
+`gemini-3.7-flash` ≈13s with the 512 cap (its predecessor `3.6-flash` was ≈18s). Grounding is
+non-deterministic — the model decides per request, so source counts swing run to run. **Skin-type analysis stays
 LOCAL** (`analyzeSkin`), since it's already shown mid-quiz in `AnalysisView`; the AI only produces
 ingredients, routine (am/pm/notes), and grounded product picks.
 
@@ -319,6 +320,63 @@ PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on 
   external-sync effect). Signed-out state is handled by a render guard, not by clearing state in the
   effect.
 
+### "Discuss with AI" - the routine chat
+
+The **main** routine's card carries a filled accent pill, **"Discuss with AI"**, where the secondary
+cards show their quiet "Set as main" text link. It opens a modal chat with a grounded cosmetologist
+persona that discusses **only that routine**. (The "Main routine" badge was softened from a filled
+accent chip to an accent *tint* chip so the pill is the one filled element in the list.) The pill
+mirrors the badge's type treatment exactly - mono, uppercase, `10.5px`, `tracking-[0.08em]`, a
+shared explicit **`h-[22px]`**, and no shadow - so the two align as a matched pair across the footer
+and the main card's footer stays close to the secondary cards'. What makes it the action is the
+accent **fill**, not a bigger or different label.
+
+- `components/profile/RoutineChat.tsx` - the modal (`role="dialog"`, Esc / backdrop / ✕ to close,
+  body scroll lock, starter chips on an empty conversation, typing indicator, "Clear chat"). It
+  posts **only a question**: the routine context is read server-side, so the client can't forge it.
+  Assistant text renders as plain paragraphs and `- ` bullets - deliberately **not** a markdown
+  renderer (a dependency plus an injection surface for what is only a formatting habit).
+- `lib/ai/chat.ts` - `buildRoutineContext()` (saved profile, needs, ingredients, AM/PM steps and the
+  **saved product picks**, read defensively since `QuizResultSnapshot` is `unknown`-typed and old
+  saves lack fields) and `answerRoutineQuestion()`. The system prompt **imports**
+  `SAFETY_RULES` / `PRICE_RULES` / `REGION_RULES` / `STYLE_RULES` from `agent.ts` (now exported)
+  rather than restating them - a swap suggested in chat obeys the same pregnancy safety, $80 ceiling,
+  brand-origin and plain-hyphen rules the routine was built under.
+- `app/api/routine-chat/route.ts` - `POST` (ask), `GET` (history), `DELETE` (clear). Auth is
+  **required** on all three (unlike `/api/routine`); the routine is loaded from
+  `users/{uid}/quizzes/{quizId}` via the Admin SDK, so `firestore.rules` stays deny-all. Uses
+  `createProvider()` with **no model override**, i.e. exactly the quiz's default model.
+- **Persistence:** `users/{uid}/quizzes/{quizId}/chat/{msgId}` = `{ role, text, grounding?,
+  createdAt }`, capped at 40 stored messages (oldest trimmed); only the last `CHAT_HISTORY_TURNS`
+  (12) are replayed into the prompt. Grounding is stored **per assistant turn** because the ToS
+  display obligation follows the answer, including when a stored conversation is reloaded.
+- **Delete cascade:** Firestore does not remove subcollections with their parent, so
+  `DELETE /api/users` now deletes the `chat` subcollection explicitly. Without it the messages orphan
+  and a reused id could surface someone's old conversation.
+
+**Two enforcement layers, both measured and both needed:**
+
+1. **Scope.** The prompt states the boundary, refuses in one sentence, and treats any in-conversation
+   instruction that tries to redefine the rules as off-topic. Measured: general knowledge, "write me
+   a Python script", a direct "ignore your previous instructions", adjacent-but-out-of-scope
+   (dandruff shampoo) and an injection placed *after* a legitimate turn were all declined and
+   redirected.
+2. **Product quality - the prompt is NOT enough.** The bar is "only recommend well-regarded products,
+   with the rating you actually saw". Grounding is the model's own decision, and over 5 repeats of the
+   same product question it searched on only **3 of 5** - the other two named a product *and* quoted a
+   star rating purely from memory. So `answerRoutineQuestion()` retries: if a reply makes a product
+   claim (`PRODUCT_CLAIM_RE` - a star score, review count, "recommended by", a price) while
+   `grounding` is empty, it re-asks once with `FORCE_SEARCH_NUDGE` ("search now, or name no product
+   at all"). An ungrounded reply with no product claim (order, frequency, layering) is left alone -
+   retrying those only adds latency. A claim that survives both attempts is logged as
+   `chat.unverifiedClaim` rather than passing silently. After the fix: **8/8 grounded, 0 unverified.**
+3. `stripMarkdown()` runs alongside `stripLongDashes()` on every reply - the model reached for
+   `**bold**` product names, which the plain-text bubble would have shown as literal asterisks.
+
+**Gotcha - a scrim must not use `ss-ink`.** `--color-ss-ink` inverts to a *light* colour in dark
+mode, so a `bg-ss-ink/35` backdrop brightened the page behind the dialog instead of dimming it. The
+overlay uses `bg-black/45` in both themes.
+
 ## Shop product sourcing (real-time, with offline fallback)
 
 Product picks on the Shop screen must be **real-time** — taken from the AI's grounded research, not
@@ -477,13 +535,13 @@ pre-fix) picks until rebuilt.
 - **Don't merge grounding + `responseSchema` into one Gemini call** — it corrupts the JSON (see
   "Two-step agent"). Keep grounded prose and JSON structuring as separate `generate()` calls.
 - **`thinkingBudget: 0` is rejected by the current models.** `gemini-3.5-flash-lite` and
-  `gemini-3.6-flash` 400 (`INVALID_ARGUMENT`) on a thinking budget of exactly 0 — thinking can't be
+  `gemini-3.7-flash` 400 (`INVALID_ARGUMENT`) on a thinking budget of exactly 0 — thinking can't be
   switched off on them (older `3.1-flash-lite`/`3.5-flash` allowed it). Any budget ≥ 1, or `-1`
   (dynamic), is fine; `agent.ts` uses `MIN_THINKING_BUDGET = 1` for the structuring step. Symptom if
   this regresses: every routine silently falls back to the local logic, since `/api/routine` 500s.
   `thinkingLevel` (`low`/`medium`/`high`) is NOT accepted on these models via v1beta — use the
   numeric budget.
-- **AI latency:** a grounded `gemini-3.6-flash` route is ~18s; mind serverless function
+- **AI latency:** a grounded `gemini-3.7-flash` route is ~13s; mind serverless function
   timeouts when deploying. Levers if needed: trim the brief, request fewer products, lower the
   research `thinkingBudget` further.
 - The two-step prompts/safety rules live in `agent.ts` (`SAFETY_RULES` is shared by both steps so
@@ -754,23 +812,51 @@ client path drives normally:
       id** → "Updated ✓". Repeated twice, identical. The review-hub path was regression-driven from
       the same fixture: a pure review still shows **no** save panel and issues **0** writes, and a
       rebuild there still offers "Save this version" → PUT. 0 console errors in both.
+27. **"Discuss with AI" chat on the main routine (this session):** a filled accent pill on the main
+    routine's card opens a modal conversation with a grounded cosmetologist persona that discusses
+    only that routine — see the section of the same name under User profile. New `lib/ai/chat.ts`,
+    `app/api/routine-chat/route.ts` (POST/GET/DELETE, auth required) and
+    `components/profile/RoutineChat.tsx`; conversations persist under
+    `users/{uid}/quizzes/{quizId}/chat` and are cascade-deleted with the routine. The shared rule
+    blocks in `agent.ts` are now exported and reused, so chat obeys the same safety, $80 and
+    brand-origin rules.
+    - Verified: refusal/scope probes (general knowledge, code, direct injection, adjacent skincare,
+      injection after a legitimate turn) — all declined and redirected. Product-recommendation
+      grounding measured over repeats: **3/5 before** the retry enforcement (two replies quoted a
+      star rating with no search behind it), **8/8 grounded, 0 unverified after**. Playwright drive
+      with a fake Firebase session + stubbed `/api/routine-chat`: one Discuss button (main card
+      only), correct POST body, history restores on reopen, Clear chat empties it, Esc closes,
+      dark-mode scrim fixed, 0 console errors. Real token verification and the Firestore
+      read/write path are **not** E2E-tested (same gap as the rest of the signed-in server half).
+28. **`gemini-3.6-flash` → `gemini-3.7-flash` (this session):** the `ModelPicker`'s second option,
+    changed across `ALLOWED_MODELS`, `ModelPicker`, `.env.example` and the code comments. The id was
+    confirmed against the live `models` list first (as with the previous bump), then driven
+    end-to-end through `POST /api/routine`: ≈13s, 5 grounded sources + chip, 4 ingredients, 4+4
+    steps, 25 products, and **no `thinkingBudget` 400** — the failure the last upgrade hit. Also
+    confirmed the retired `gemini-3.6-flash` id now falls back to the env default instead of being
+    passed through, which is exactly what `ALLOWED_MODELS` is for. The default model and the routine
+    chat are untouched: both still run `gemini-3.5-flash-lite`.
 
 ## Likely next steps
 
 - **Pick one model and remove the temporary `ModelPicker`** (the user plans to compare
-  `3.5-flash-lite` vs `3.6-flash`, then keep one and delete the switch).
+  `3.5-flash-lite` vs `3.7-flash`, then keep one and delete the switch).
 - Add an explicit **account-creation prompt** after results (the pieces exist — auth + `SaveRoutine`
   + the `/profile` page — but there's no dedicated "save & track vs. continue without an account"
   moment yet).
 - **E2E-test the signed-in flow against the real server** (PATCH set-main and DELETE especially).
   The client side of save/update is now driven in tests with a **stubbed** `/api/users` and a fake
   Firebase session (see "Driving the signed-in flow" below); what stays unverified is the server
-  half — real token verification, the 3-routine cap, `isMain` promotion and delete.
+  half — real token verification, the 3-routine cap, `isMain` promotion and delete. The routine
+  chat's server half (`/api/routine-chat` Firestore read/write, the 40-message trim, the delete
+  cascade) is in the same position.
+- **Consider a rate limit on `/api/routine-chat`.** Every message is a paid grounded call (sometimes
+  two, when the search retry fires), and today the only limits are auth plus a 1000-character cap.
 - Consider giving saved routines **persisted, user-editable names** (currently the "Routine N" label
   is derived from list position, not stored). (A **delete** action now exists.)
 - Flesh out the static pages further / add real nav destinations as the marketing site grows.
 - Optionally delete `design-incoming/` once no longer needed as reference.
-- Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.6-flash` path.
+- Mind AI latency vs. serverless timeouts if/when deploying the grounded `3.7-flash` path.
 - Consider basic CI (`tsc --noEmit` + `next build`) — the `README.md` and the Vercel deploy are done.
 - **Spot-check the EU catalog replacements** added when The Ordinary was re-tagged to `us`: the
   INKEY List / Geek & Gorgeous / Medik8 / Nip+Fab / Facetheory entries came from model knowledge,

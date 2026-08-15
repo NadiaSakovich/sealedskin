@@ -63,7 +63,7 @@ const LONG_DASH_RE = /[—–―]/g;
  * Applied to the whole output before anything else reads it, so step types stay
  * consistent with the `productsByType` keys derived from them.
  */
-function stripLongDashes<T>(value: T): T {
+export function stripLongDashes<T>(value: T): T {
   if (typeof value === "string") return value.replace(LONG_DASH_RE, "-") as T;
   if (Array.isArray(value)) return value.map(stripLongDashes) as T;
   if (value && typeof value === "object") {
