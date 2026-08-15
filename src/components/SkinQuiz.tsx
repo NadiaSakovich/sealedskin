@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { SKIN_TYPE_QUESTIONS } from "../data/questions";
 import { SKIN_CONCERNS } from "../data/concerns";
 import { SKIN_GOALS, COMMITMENT_LEVELS, REGIONS } from "../data/goals";
-import { needsSummary, AGE_LABELS } from "../data/actives";
+import { needsSummary, AGE_CHIP_LABELS } from "../data/actives";
 import { analyzeSkin } from "../lib/analysis";
 import { anonHeaders } from "../lib/anonId";
 import { getCurrentIdToken } from "../lib/firebase/client";
@@ -329,7 +329,7 @@ export default function SkinQuiz() {
     // big brand is sold there — which is how French and Korean brands were
     // leaking into a North-American routine. The description carries the actual
     // intent, which is where the brand itself comes from.
-    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.desc ? `${reg.label} — ${reg.desc}` : reg.label });
+    if (reg) out.push({ questionId: "region", question: "Region preference", answer: reg.desc ? `${reg.label} - ${reg.desc}` : reg.label });
     return out;
   }
 
@@ -368,7 +368,7 @@ export default function SkinQuiz() {
     } catch (err) {
       // Soft-fail: show a locally built routine so the user is never stuck.
       setAiResult(buildLocalResult(profile, analysis, CONCERNS, GOALS));
-      setAiError(err instanceof Error ? err.message : "AI unavailable — showing a standard routine.");
+      setAiError(err instanceof Error ? err.message : "AI unavailable - showing a standard routine.");
     } finally {
       setBuilding(false);
     }
@@ -437,7 +437,7 @@ export default function SkinQuiz() {
               Let&rsquo;s figure out your skin type
             </h1>
             <p className="text-[16px] leading-[1.55] text-ss-ink-soft max-w-[400px] mx-auto mb-[30px] [text-wrap:pretty]">
-              A few quick questions about how your skin behaves day to day. There are no wrong answers — just pick what sounds most like you.
+              A few quick questions about how your skin behaves day to day. There are no wrong answers - just pick what sounds most like you.
             </p>
             <Button onClick={() => go(1)}>Start <Arrow /></Button>
             <div className="mt-4 text-[13px] text-ss-ink-faint">Takes about 1 minute</div>
@@ -457,7 +457,7 @@ export default function SkinQuiz() {
             <div className={eyebrowClass}>Stage 2 of 3 · Concerns</div>
             <h1 className={introH1Class}>What would you like to improve?</h1>
             <p className={introPClass}>
-              Your skin type is set. Now tell us the concerns you actually notice — pick as many or as few as feel true.
+              Your skin type is set. Now tell us the concerns you actually notice - pick as many or as few as feel true.
               This is what your routine will target.
             </p>
             <div className="flex gap-[10px] justify-center flex-wrap">
@@ -479,7 +479,7 @@ export default function SkinQuiz() {
             <div>
               <div className={eyebrowClass}>Concerns</div>
               <h2 className={qH2Class}>What would you like to work on?</h2>
-              <p className={qHelpClass}>Select all that apply — there&rsquo;s no limit, and you can skip any.</p>
+              <p className={qHelpClass}>Select all that apply - there&rsquo;s no limit, and you can skip any.</p>
             </div>
             <CountPill active={!!concerns.length}>{concerns.length} selected</CountPill>
           </div>
@@ -503,7 +503,7 @@ export default function SkinQuiz() {
             <div>
               <div className={eyebrowClass}>Concerns</div>
               <h2 className={qH2Class}>Which matter most right now?</h2>
-              <p className={qHelpClass}>Choose up to three — we&rsquo;ll put these at the centre of your routine.</p>
+              <p className={qHelpClass}>Choose up to three - we&rsquo;ll put these at the centre of your routine.</p>
             </div>
             <CountPill active={!!topConcerns.length}>{topConcerns.length} / 3</CountPill>
           </div>
@@ -542,7 +542,7 @@ export default function SkinQuiz() {
           <div className="mb-5">
             <div className={eyebrowClass}>Stage 3 of 3 · Preferences</div>
             <h2 className={qH2Class}>How involved should your routine be?</h2>
-            <p className={qHelpClass}>This sets how many steps we&rsquo;ll recommend — you can change it later.</p>
+            <p className={qHelpClass}>This sets how many steps we&rsquo;ll recommend - you can change it later.</p>
           </div>
           <CommitmentPicker levels={LEVELS} value={commitment} onChange={setCommitment} />
           <div className="flex items-center justify-between mt-6">
@@ -562,7 +562,7 @@ export default function SkinQuiz() {
           <div className="mb-5">
             <div className={eyebrowClass}>Preferences</div>
             <h2 className={qH2Class}>Any preference on where your skincare comes from?</h2>
-            <p className={qHelpClass}>We&rsquo;ll lean your product suggestions toward this — it doesn&rsquo;t change the routine itself.</p>
+            <p className={qHelpClass}>We&rsquo;ll lean your product suggestions toward this - it doesn&rsquo;t change the routine itself.</p>
           </div>
           <CommitmentPicker levels={REGIONS} value={region} onChange={(v) => setRegion(v as RegionId)} />
           <div className="flex items-center justify-between mt-6">
@@ -645,7 +645,7 @@ export default function SkinQuiz() {
             <div className="mx-auto mb-6 w-9 h-9 rounded-full border-[3px] border-ss-hairline border-t-ss-accent animate-spin" />
             <div className="font-head font-semibold text-[20px] text-ss-ink mb-1">Building your routine</div>
             <p className="text-[14.5px] text-ss-ink-soft max-w-[320px] mx-auto [text-wrap:pretty]">
-              Consulting current products and the latest ingredient guidance — this takes a few seconds.
+              Consulting current products and the latest ingredient guidance - this takes a few seconds.
             </p>
           </div>
         </Screen>
@@ -661,7 +661,7 @@ export default function SkinQuiz() {
     const chips = [
       { label: `${profile.typeLabel} skin`, solid: true },
       profile.sensitivity === "high" && { label: "Sensitive", solid: false },
-      profile.age && { label: AGE_LABELS[profile.age].replace("in your ", "").replace("under 20", "Under 20"), solid: false },
+      profile.age && { label: AGE_CHIP_LABELS[profile.age], solid: false },
       ...profile.topConcernLabels.map((l) => ({ label: l, solid: false })),
       profile.commitmentLabel && { label: profile.commitmentLabel, solid: false },
       profile.region !== "none" && profile.regionLabel && { label: profile.regionLabel, solid: false },

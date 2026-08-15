@@ -29,7 +29,7 @@ export function AnalysisView({ result, onContinue, onBack, onEditSkin }: Props) 
       <div className="mb-[22px]">
         <div className="flex justify-between items-center mb-3">
           <span className="font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink">
-            Your skin analysis · stages 1–2
+            Your skin analysis · stages 1-2
           </span>
           <button type="button" onClick={onEditSkin} className="border-none bg-transparent cursor-pointer font-mono text-[11.5px] text-ss-accent-ink">
             edit answers
@@ -56,7 +56,7 @@ export function AnalysisView({ result, onContinue, onBack, onEditSkin }: Props) 
       </div>
 
       <p className="text-[14.5px] leading-[1.55] text-ss-ink-soft mt-6 mb-0 [text-wrap:pretty]">
-        Next, you&rsquo;ll set a few preferences — how involved you want your routine to be and what suits you — and we&rsquo;ll turn
+        Next, you&rsquo;ll set a few preferences - how involved you want your routine to be and what suits you - and we&rsquo;ll turn
         this whole picture into a routine built for your skin.
       </p>
 

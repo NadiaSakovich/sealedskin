@@ -147,7 +147,7 @@ export function SaveRoutine({
       </Button>
       {status === "error" && error && (
         <p className="text-[12.5px] leading-[1.45] text-caution-text m-0 mt-3 [text-wrap:pretty]">
-          {error} — please try again.
+          {error} - please try again.
         </p>
       )}
     </div>

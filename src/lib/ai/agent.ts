@@ -1,5 +1,6 @@
 import type { ChatMessage, GroundingInfo, LLMProvider } from "./types";
 import type { AiRoutineOutput, QuizAnswer } from "@/lib/domain/types";
+import { MAX_PRODUCT_PRICE } from "@/data/products";
 
 /**
  * Lowest thinking budget the current Gemini models accept. They reject a budget
@@ -81,6 +82,33 @@ frequency and conflicts (don't combine a retinoid and an acid the same night).
 brief note that this is general guidance, not medical advice.`;
 
 /**
+ * The price ceiling on suggested products. Our users are building a first
+ * routine, so a $180 serum is noise, not an option - and a pick we won't show is
+ * a wasted pick, since `ShopView` drops anything over the cap at render. Hence
+ * telling the model up front, so all three picks per step are usable.
+ */
+const PRICE_RULES = `Price limit:
+- NEVER suggest a product that costs more than $${MAX_PRODUCT_PRICE} (USD, or the local \
+equivalent). This is a hard limit - a pricier product is not an option for this \
+audience, however good it is.
+- "Premium" here means the top of a beginner's budget (roughly \
+$35-$${MAX_PRODUCT_PRICE}), NOT luxury skincare.
+- Prefer well-reviewed, widely sold products people can actually re-buy.`;
+
+/**
+ * House style for the copy the model writes. Only the dash rule really matters:
+ * an em dash is the tell readers pick up on as "an AI wrote this", and all of
+ * our own hardcoded copy uses plain hyphens, so the model's should match.
+ * `stripLongDashes()` in `lib/ai/result.ts` enforces it deterministically -
+ * prompt for the habit, enforce for the guarantee.
+ */
+const STYLE_RULES = `Writing style:
+- Write plainly, the way a knowledgeable person would talk, not like marketing copy.
+- Use ONLY the plain hyphen "-" for punctuation. NEVER use an em dash or an en \
+dash. Prefer a comma, a full stop or brackets where you would reach for one.
+- Write number ranges with a hyphen (SPF 30-50, 2-3 nights a week).`;
+
+/**
  * How to read the "Region preference" answer. The user is choosing where the
  * BRAND comes from — the quiz options say so ("North American brands",
  * "European pharmacy & heritage brands") — but the label alone is easy to read
@@ -135,15 +163,21 @@ one Budget, one Mid, and one Premium; if you can't find three distinct price \
 tiers, still give three options (repeating a tier is fine). Each needs a brand, \
 product name, an approximate price, and a tier (Budget/Mid/Premium).
 
+${PRICE_RULES}
+
 ${REGION_RULES}
 
-${SAFETY_RULES}`;
+${SAFETY_RULES}
+
+${STYLE_RULES}`;
 
 // STEP 2 — structure the brief into the exact schema. No grounding here, so the
 // structured-output decoder produces clean, valid JSON.
 const STRUCTURE_SYSTEM = `You convert a skincare brief into structured data.
 Use ONLY the information in the brief; do not invent new products. Include EVERY \
-product mentioned in the brief (the brief aims for three per routine step). For \
+product mentioned in the brief (the brief aims for three per routine step), with \
+ONE exception: DROP any product priced above $${MAX_PRODUCT_PRICE}, which is over \
+our limit and will not be shown. For \
 each shop product, set "stepType" to EXACTLY match the "type" of the routine step \
 it belongs to, so it can be grouped under that step. If the brief describes a \
 double cleanse, emit it as two separate routine steps (an oil/balm cleanser then \
@@ -151,7 +185,9 @@ a water-based cleanser), never a single "double cleanse" step. Preserve the \
 brief's safety guidance in the routine notes. Output ONLY data matching the \
 provided schema.
 
-${SAFETY_RULES}`;
+${SAFETY_RULES}
+
+${STYLE_RULES}`;
 
 /**
  * Extra rules appended to BOTH system prompts when the user picked the "minimal"

@@ -338,6 +338,15 @@ a hardcoded list. The flow (`components/results/ShopView.tsx`):
   above (unparseable prices read as Premium). `priceValue` parses `$/£/€`, commas, and ranges → first
   number. Picks are still sorted cheapest→priciest for display order, but each pick's tier is its own
   band, so labels are consistent across steps for **both** the live AI picks and the offline catalog.
+- **Nothing over `MAX_PRODUCT_PRICE` ($80, exported from `products.ts`).** The audience is people
+  building a first routine, so "Premium" is capped rather than open-ended. Prompt **and** enforcement
+  again: `PRICE_RULES` (both prompts in `agent.ts`) keeps the model from spending its three picks on
+  products we won't show, and `ShopView.resolve` drops over-cap picks **while collecting**, not after,
+  so an expensive pick can't eat one of the three slots and then vanish. Only *parseable* prices are
+  judged (an unparseable one passes, like an unknown brand in `enforceRegion`). Filtering at render
+  means saved routines and the offline catalog are covered too. The two catalog entries that breached
+  it (SkinCeuticals C E Ferulic $182, Drunk Elephant Framboos $90) were removed; every slot still has
+  ≥3 picks per region.
 - **Labels:** the routine screen CTA reads "**See recommended products**" (`RoutineView`), and the
   shop screen heading is "**Products for your routine**" (`ShopView`).
 - `products.ts` catalog depth: every **common** routine slot has ≥3 options per major region
@@ -661,6 +670,36 @@ Google Chrome** from a throwaway dir to keep project deps clean:
     - **Process lesson worth keeping:** the first pass was declared fixed on the strength of ONE
       grounded run per region. Repeating the same profile showed 3 of 4 runs still leaking. Anything
       measured through a grounded model needs **repeated** runs before it counts as verified.
+25. **No em dashes, new age bands, and an $80 price ceiling (this session):**
+    - **Every long dash in user-facing copy is now a plain hyphen.** Readers clock an em dash as
+      "an AI wrote this", so `-` is the house style: 76 replacements across 17 files (page metadata
+      and content routes, quiz screens and help text, results screens, `analysis.ts` prose,
+      `actives.ts` step notes and ingredient copy, `goals.ts`, `questions.ts`). Code comments were
+      left alone. Ranges went with it ("SPF 30-50", "2-3 nights a week").
+    - **The AI's copy is normalised too**, prompt **and** enforcement: `STYLE_RULES` (both prompts in
+      `agent.ts`) asks for plain hyphens only, and `stripLongDashes()` runs over the whole model
+      output at the top of `buildAiResult` — before anything reads it, so step types stay consistent
+      with the `productsByType` keys derived from them.
+    - **Age ranges are now Under 18 / 18-24 / 25-34 / 35-44 / 45+** (`AgeId` ids `under18`, `18to24`,
+      `25to34`, `35to44`, `45plus`). Not just relabelled: the **active targeting moved with the
+      bands** — retinoid scores for `25to34/35to44/45plus`, peptides for `35to44/45plus` — and the
+      prevention-vs-renewal split in `needsSummary` now breaks at `under18/18to24`. `AGE_LABELS` is
+      the sentence form ("Being 25 to 34, …"); a new `AGE_CHIP_LABELS` gives the results chip its
+      short form, replacing the `.replace("in your ", "")` string surgery in `SkinQuiz`.
+      **Saved routines from before this** hold retired option ids, so their age question shows
+      nothing selected when reopened (the snapshot itself still renders fine).
+    - **Nothing over $80 is suggested** — see "Nothing over `MAX_PRODUCT_PRICE`" under Shop product
+      sourcing. Prompt (`PRICE_RULES`) plus a render-time filter in `ShopView.resolve`, two catalog
+      entries removed.
+    - Verified: `tsc`/ESLint clean; an SSR unit test of `ShopView` (over-cap picks dropped without
+      eating a slot: $182/$95 out, three picks still shown); a catalog sweep (every slot ≥3 picks per
+      region, 0 entries over the cap); a `buildAiResult` unit test (0 long dashes left, product keying
+      intact); and a full Playwright drive on a **live AI** routine — new age options render, chip
+      reads "25-34", prose reads "Being 25 to 34", all 15 picks $10-$24, 0 long dashes, 0 console
+      errors.
+    - Handy: SSR-rendering a component in a unit test works with the same
+      `npx --yes tsx <script>.tsx` trick, but the script must sit **in the repo root** — from the
+      scratchpad, Node can't resolve `react-dom/server`.
 
 ## Likely next steps
 

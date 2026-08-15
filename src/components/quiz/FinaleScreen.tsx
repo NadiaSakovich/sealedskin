@@ -157,7 +157,7 @@ export function FinaleScreen({
             </Button>
             {review.changed && (
               <p className="text-[12.5px] text-ss-ink-faint mt-[10px] [text-wrap:pretty]">
-                You changed your answers — rebuild to refresh the routine.
+                You changed your answers - rebuild to refresh the routine.
               </p>
             )}
           </div>

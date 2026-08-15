@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { RegionId, Routine, RoutineStep } from "../../types";
-import { productsForStep, slotForStep } from "../../data/products";
+import { productsForStep, slotForStep, MAX_PRODUCT_PRICE } from "../../data/products";
 import type { ShopProduct } from "../../lib/ai/result";
 import { Button } from "../ui/Button";
 import { Arrow } from "../ui/Arrow";
@@ -13,8 +13,20 @@ function priceValue(price: string): number {
 }
 
 /**
+ * Too expensive to suggest to someone building a first routine (see
+ * MAX_PRODUCT_PRICE). Only picks we can actually price are judged — an
+ * unparseable price passes, the same way an unknown brand passes the region
+ * filter, since dropping it would lose a good pick over a formatting quirk.
+ */
+function overPriceCap(price: string): boolean {
+  const v = priceValue(price);
+  return Number.isFinite(v) && v > MAX_PRODUCT_PRICE;
+}
+
+/**
  * Budget/Mid/Premium label from a pick's absolute price:
- * up to $20 → Budget, up to $35 → Mid, anything pricier → Premium.
+ * up to $20 → Budget, up to $35 → Mid, anything pricier (to the
+ * MAX_PRODUCT_PRICE cap) → Premium.
  * Picks without a parseable price (priceValue → Infinity) read as Premium.
  */
 function tierForPrice(price: string): ShopProduct["tier"] {
@@ -66,7 +78,7 @@ function ShopStep({ step, products }: { step: RoutineStep; products: ShopProduct
         // The step still belongs in the routine, so never silently drop it — say so
         // plainly when no current picks came back for it.
         <p className="text-[12.5px] leading-[1.45] text-ss-ink-faint m-0 px-[13px] py-[10px] rounded-[11px] bg-ss-surface border border-ss-hairline [text-wrap:pretty]">
-          No current picks to show for this step — any well-formulated {step.type.toLowerCase()} suited to your skin works here.
+          No current picks to show for this step - any well-formulated {step.type.toLowerCase()} suited to your skin works here.
         </p>
       )}
     </div>
@@ -147,7 +159,9 @@ export function ShopView({
     const seen = new Set<string>();
     for (const p of source) {
       const key = `${p.brand}|${p.name}`.toLowerCase().trim();
-      if (out.length >= 3 || key === "|" || seen.has(key)) continue;
+      // The price cap is applied while collecting, not after: a $180 serum must
+      // not take one of the three slots and then vanish, leaving the step short.
+      if (out.length >= 3 || key === "|" || seen.has(key) || overPriceCap(p.price)) continue;
       seen.add(key);
       out.push(p);
     }
@@ -164,7 +178,7 @@ export function ShopView({
       <h1 className={resHeadlineClass}>Products for your routine</h1>
       <p className={resIntroClass}>
         A few picks at different budgets for every step
-        {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : " — a mix from around the world"}. Brands are
+        {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : " - a mix from around the world"}. Brands are
         examples of the right <em>type</em> of product, not endorsements, and prices are approximate.
       </p>
 
