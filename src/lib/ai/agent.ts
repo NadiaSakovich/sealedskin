@@ -98,39 +98,53 @@ $35-$${MAX_PRODUCT_PRICE}), NOT luxury skincare.
 - Prefer well-reviewed, widely sold products people can actually re-buy.`;
 
 /**
- * House style for the copy the model writes.
+ * Mechanics only: the things that must be consistent everywhere, in the routine
+ * copy and in Snuffy's replies alike, because an inconsistency in them reads as
+ * carelessness rather than as character.
  *
- * The em dash used to be the whole of this block, on the theory that the glyph
- * is what readers register as "an AI wrote this". It isn't. Banning the
- * character only moved the habit: the model kept writing `claim - restatement
- * of the claim`, kept reaching for "X, not Y", and kept listing everything in
- * threes, which is what the tell actually sounds like. So the constructions are
- * named here too, and the word list catches the rest.
+ * The em dash was once the whole of the house style, on the theory that the
+ * glyph is what readers register as "an AI wrote this". It isn't. Banning the
+ * character only moved the habit. But the sentence-level habits are a matter of
+ * voice, so they live in PROSE_RULES and apply only where there is no character
+ * speaking. `stripLongDashes()` in `lib/ai/result.ts` still enforces the dash
+ * rule deterministically: prompt for the habit, enforce for the guarantee.
  *
- * `stripLongDashes()` in `lib/ai/result.ts` still enforces the dash rule
- * deterministically: prompt for the habit, enforce for the guarantee. The
- * sentence rules have no such backstop, so they are stated bluntly.
- *
- * Spelling is here because the rest of the product is en-GB and the model
- * defaults to en-US, which would drop "moisturizer" into a page that otherwise
- * says "moisturiser" - the same mixed-orthography tell, regenerated on every
- * run.
+ * Spelling is here because the product is en-GB and the model defaults to
+ * en-US, which drops "moisturizer" into a page that otherwise says
+ * "moisturiser" - a mixed-orthography tell, regenerated on every run.
  */
-export const STYLE_RULES = `Writing style:
-- Write the way a knowledgeable friend talks. Short sentences. Vary their length.
+export const STYLE_RULES = `Mechanics:
 - Use ONLY the plain hyphen "-". NEVER an em dash or an en dash. Write number \
 ranges with a hyphen (SPF 30-50, 2-3 nights a week).
-- Do NOT end a sentence with a hyphen followed by a restatement of what you \
-just said. Write two sentences instead.
-- Do NOT use the "X, not Y" or "rather than" construction. Say the positive \
-thing and stop.
-- Avoid three-item lists. Two is usually enough, and one specific thing is \
-better than three vague ones.
-- Never use the words: actually, simply, truly, honest, journey, elevate, \
-unlock, powerhouse, game-changer.
-- Do not open a sentence with "Think of it as" or "It's not just".
 - Use British spelling (moisturiser, personalised, analyse, colour). Product \
 names keep the spelling printed on the bottle.`;
+
+/**
+ * How the routine copy should read: the ingredient cards, the per-step notes,
+ * the "Good to know" list. Nobody is speaking here, so the failure mode is
+ * generated-marketing-copy voice, and these are the habits that produce it.
+ *
+ * Deliberately NOT applied to Snuffy (`lib/ai/chat.ts`). Every one of these
+ * would blunt a joke: sarcasm is built on contrast, a comic list has three
+ * items, and a punchline often is a trailing clause after a dash. A character
+ * with a voice does not read as machine-written, so the rules that fight
+ * voicelessness are the wrong tool there.
+ *
+ * Phrased as preferences, not prohibitions. A model contorting to avoid a
+ * natural phrasing produces its own kind of stilted tell.
+ */
+export const PROSE_RULES = `Writing the routine copy:
+- Write the way a knowledgeable friend talks. Vary your sentence lengths. \
+Fragments are fine.
+- Try not to end a sentence with a hyphen and then a restatement of what you \
+just said. Two sentences usually read better. One of those per section is fine.
+- Contrast is fine where the contrast is the point ("at night rather than in \
+the morning"). You don't need it for emphasis.
+- Lean concrete. One specific detail beats three vague ones. Where a count is \
+required (the three product picks per step, the routine steps themselves), the \
+required count always wins.
+- Go easy on: actually, simply, truly, journey, elevate, unlock, powerhouse, \
+game-changer, "think of it as", "it's not just".`;
 
 /**
  * How to read the "Region preference" answer. The user is choosing where the
@@ -193,7 +207,9 @@ ${REGION_RULES}
 
 ${SAFETY_RULES}
 
-${STYLE_RULES}`;
+${STYLE_RULES}
+
+${PROSE_RULES}`;
 
 // STEP 2 — structure the brief into the exact schema. No grounding here, so the
 // structured-output decoder produces clean, valid JSON.
@@ -211,7 +227,9 @@ provided schema.
 
 ${SAFETY_RULES}
 
-${STYLE_RULES}`;
+${STYLE_RULES}
+
+${PROSE_RULES}`;
 
 /**
  * Extra rules appended to BOTH system prompts when the user picked the "minimal"
