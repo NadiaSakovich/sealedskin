@@ -8,7 +8,13 @@ import {
   buildRoutineContext,
   MAX_CHAT_MESSAGE_CHARS,
 } from "@/lib/ai/chat";
+import {
+  DEFAULT_CHAT_PERSONA,
+  isChatPersonaId,
+  type ChatPersonaId,
+} from "@/lib/ai/personas";
 import type { RoutineChatMessage } from "@/lib/domain/types";
+import { byConversationOrder } from "@/lib/domain/chatOrder";
 import {
   logger,
   flushLogs,
@@ -69,6 +75,18 @@ function chatRef(uid: string, quizId: string) {
     .collection("chat");
 }
 
+/**
+ * The voice this conversation is being held in.
+ *
+ * Stored on the routine document rather than on each message: it belongs to the
+ * conversation, not to a turn, and it has to survive a page reload so Snuffy
+ * doesn't change character halfway through. Anything unrecognised (an old save,
+ * a hand-edited document) reads as the default rather than reaching the model.
+ */
+function storedPersona(quiz: FirebaseFirestore.DocumentData): ChatPersonaId | null {
+  return isChatPersonaId(quiz.chatPersona) ? quiz.chatPersona : null;
+}
+
 function toMessage(doc: QueryDocumentSnapshot): RoutineChatMessage {
   const data = doc.data();
   const createdAt = data.createdAt;
@@ -82,17 +100,29 @@ function toMessage(doc: QueryDocumentSnapshot): RoutineChatMessage {
   };
 }
 
-/** Read the stored conversation, oldest first (the order the model expects). */
+/**
+ * Read the stored conversation, oldest first (the order the model expects).
+ *
+ * Sorted in memory rather than trusting `orderBy("createdAt")` alone: the two
+ * messages of a turn share one commit timestamp, so Firestore breaks that tie by
+ * random document id. See `lib/domain/chatOrder`.
+ *
+ * Sorting on the READ side is deliberate. A write-side fix would only help new
+ * messages and would leave every conversation already stored permanently
+ * scrambled; this repairs those too, with no migration.
+ */
 async function readHistory(uid: string, quizId: string): Promise<RoutineChatMessage[]> {
   const snap = await chatRef(uid, quizId).orderBy("createdAt", "asc").get();
-  return snap.docs.map(toMessage);
+  return snap.docs.map(toMessage).sort(byConversationOrder);
 }
 
 /**
  * GET /api/routine-chat?quizId=<id>
  *
  * The stored conversation for one saved routine, so reopening the chat window
- * resumes where the user left off.
+ * resumes where the user left off, plus the voice it is being held in. A null
+ * `persona` is what makes the window show the chooser, so it is returned
+ * distinct from the default rather than being filled in here.
  */
 export async function GET(req: Request) {
   const token = await authedUid(req);
@@ -106,10 +136,22 @@ export async function GET(req: Request) {
   }
 
   try {
+    const quizSnap = await adminDb()
+      .collection("users")
+      .doc(token.uid)
+      .collection("quizzes")
+      .doc(quizId)
+      .get();
     const messages = await readHistory(token.uid, quizId);
-    logger.info("chat.history", { ...user, quizId, messageCount: messages.length });
+    const persona = quizSnap.exists ? storedPersona(quizSnap.data() ?? {}) : null;
+    logger.info("chat.history", {
+      ...user,
+      quizId,
+      messageCount: messages.length,
+      persona: persona ?? "unset",
+    });
     await flushLogs();
-    return NextResponse.json({ messages });
+    return NextResponse.json({ messages, persona });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     logger.error("chat.history.failed", { ...user, quizId, ...errorData(err) });
@@ -122,6 +164,10 @@ export async function GET(req: Request) {
  * DELETE /api/routine-chat?quizId=<id>
  *
  * Clears the conversation for one saved routine ("Clear chat" in the window).
+ *
+ * The stored persona goes with it. Clearing is how a client starts over, and
+ * the voice was chosen for the conversation being discarded - so the next one
+ * gets the chooser again rather than silently inheriting the old choice.
  */
 export async function DELETE(req: Request) {
   const token = await authedUid(req);
@@ -138,6 +184,10 @@ export async function DELETE(req: Request) {
     const snap = await chatRef(token.uid, quizId).get();
     const batch = adminDb().batch();
     snap.docs.forEach((doc) => batch.delete(doc.ref));
+    batch.update(
+      adminDb().collection("users").doc(token.uid).collection("quizzes").doc(quizId),
+      { chatPersona: FieldValue.delete() },
+    );
     await batch.commit();
     logger.info("chat.cleared", { ...user, quizId, messageCount: snap.size });
     await flushLogs();
@@ -153,8 +203,8 @@ export async function DELETE(req: Request) {
 /**
  * POST /api/routine-chat
  * Headers: Authorization: Bearer <Firebase ID token>
- * Body: { quizId: string, message: string }
- * Returns: { reply: RoutineChatMessage }
+ * Body: { quizId: string, message: string, persona?: ChatPersonaId }
+ * Returns: { reply: RoutineChatMessage, persona: ChatPersonaId }
  *
  * Answers one question about the caller's own saved routine.
  *
@@ -163,6 +213,11 @@ export async function DELETE(req: Request) {
  * the request stays small. The model is the quiz's default (`createProvider()`
  * with no override), so chat and routine generation always speak with the same
  * voice and the same capabilities.
+ *
+ * `persona` names one of two voices; it never carries one. The browser sends an
+ * id, this route resolves it against the whitelist in `lib/ai/personas`, and an
+ * unrecognised value falls back to what is stored, then to the default - so a
+ * crafted request can pick between Snuffy's two registers and nothing else.
  */
 export async function POST(req: Request) {
   const startedAt = Date.now();
@@ -170,7 +225,7 @@ export async function POST(req: Request) {
   if (!token) return unauthorized(req, "chat");
   const user = ctx(token, req);
 
-  let body: { quizId?: string; message?: string };
+  let body: { quizId?: string; message?: string; persona?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -215,8 +270,21 @@ export async function POST(req: Request) {
     const history = await readHistory(token.uid, quizId);
     const routineContext = buildRoutineContext(quiz.submission ?? null, quiz.result ?? null);
 
+    // The request's choice wins (this is the turn the client picked it on),
+    // then whatever the conversation was already being held in, then the
+    // default for a transcript saved before the chooser existed.
+    const persona: ChatPersonaId = isChatPersonaId(body.persona)
+      ? body.persona
+      : (storedPersona(quiz) ?? DEFAULT_CHAT_PERSONA);
+
     const provider = createProvider();
-    const reply = await answerRoutineQuestion(provider, routineContext, history, question);
+    const reply = await answerRoutineQuestion(
+      provider,
+      routineContext,
+      history,
+      question,
+      persona,
+    );
 
     // The model asserted a product's standing without ever searching, twice in a
     // row. The reply still goes out (it is advice, not a fabrication we can
@@ -230,6 +298,12 @@ export async function POST(req: Request) {
     // leave a dangling question in the transcript.
     const chat = chatRef(token.uid, quizId);
     const batch = adminDb().batch();
+    // Written every turn rather than only the first: it is a single field on a
+    // document already being read, and it repairs a conversation whose stored
+    // choice was missing or unrecognised.
+    if (storedPersona(quiz) !== persona) {
+      batch.update(quizRef, { chatPersona: persona });
+    }
     batch.set(chat.doc(), {
       role: "user",
       text: question,
@@ -246,14 +320,18 @@ export async function POST(req: Request) {
     await batch.commit();
 
     // Trim the oldest turns so one routine's transcript stays bounded.
+    //
+    // Deleted by id from the already-ordered `history` rather than by re-running
+    // `orderBy("createdAt").limit(n)`. That query breaks the same batch-timestamp
+    // tie by random document id (see `lib/domain/chatOrder`), so it could delete
+    // a question while keeping its answer and leave a dangling half-turn in the
+    // transcript. It also saves a read: the two new messages are by definition
+    // the newest, so everything trimmable is already in `history`.
     const stored = history.length + 2;
     if (stored > MAX_STORED_MESSAGES) {
-      const excess = await chat
-        .orderBy("createdAt", "asc")
-        .limit(stored - MAX_STORED_MESSAGES)
-        .get();
+      const overflow = history.slice(0, stored - MAX_STORED_MESSAGES);
       const trim = adminDb().batch();
-      excess.docs.forEach((doc) => trim.delete(doc.ref));
+      overflow.forEach((m) => trim.delete(chat.doc(m.id)));
       await trim.commit();
     }
 
@@ -261,6 +339,7 @@ export async function POST(req: Request) {
       ...user,
       quizId,
       model: `${provider.id}:${provider.model}`,
+      persona,
       durationMs: Date.now() - startedAt,
       questionChars: question.length,
       replyChars: reply.text.length,
@@ -276,7 +355,7 @@ export async function POST(req: Request) {
       ...(reply.grounding ? { grounding: reply.grounding } : {}),
       createdAt: Date.now(),
     };
-    return NextResponse.json({ reply: message });
+    return NextResponse.json({ reply: message, persona });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     logger.error("chat.failed", {

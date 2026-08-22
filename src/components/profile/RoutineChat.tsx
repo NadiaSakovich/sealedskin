@@ -6,9 +6,24 @@ import { anonHeaders } from "../../lib/anonId";
 import type { RoutineChatMessage } from "../../lib/domain/types";
 import type { GroundingInfo } from "../../lib/ai/types";
 import { GroundingSources } from "../results/GroundingSources";
+import {
+  CHAT_PERSONA_IDS,
+  CHAT_PERSONA_META,
+  type ChatPersonaId,
+} from "../../lib/ai/personas";
 
 /** Mirrors `MAX_CHAT_MESSAGE_CHARS` on the server, so the UI stops you first. */
 const MAX_CHARS = 1000;
+
+/**
+ * How Snuffy opens, in each voice. Rendered by us rather than generated: the
+ * greeting is the client's first sight of the voice they just picked, and
+ * spending a grounded model call to say hello would be slow and pointless.
+ */
+const GREETINGS: Record<ChatPersonaId, (routine: string) => string> = {
+  warm: (routine) => `Hello - I'm Snuffy, and I have your ${routine} routine right here.`,
+  dry: (routine) => `Snuffy here. I've read your ${routine} routine, so let's get into it.`,
+};
 
 /**
  * Openers offered on an empty conversation. They exist to show the scope: this
@@ -92,7 +107,7 @@ function TypingDots() {
 }
 
 /**
- * The "Discuss with AI" window: a modal conversation about one saved routine.
+ * The "Discuss with Snuffy" window: a modal conversation about one saved routine.
  *
  * The routine itself is never sent from here - the server reads it from the
  * caller's own Firestore record by `quizId`, so all this component posts is a
@@ -100,6 +115,12 @@ function TypingDots() {
  */
 export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
+  /**
+   * The voice this conversation is held in. `null` means it has not been
+   * chosen yet, which is what puts the chooser on screen; the server returns
+   * null the same way rather than defaulting for us.
+   */
+  const [persona, setPersona] = useState<ChatPersonaId | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -133,8 +154,12 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         headers: { Authorization: `Bearer ${idToken}`, ...anonHeaders() },
       });
       if (res.ok) {
-        const body = (await res.json()) as { messages?: Message[] };
+        const body = (await res.json()) as {
+          messages?: Message[];
+          persona?: ChatPersonaId | null;
+        };
         setMessages(body.messages ?? []);
+        setPersona(body.persona ?? null);
       }
     } catch {
       // A failed history read is not worth an error panel - the user can still
@@ -160,7 +185,10 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
 
   async function send(question: string) {
     const text = question.trim();
-    if (!text || sending) return;
+    // No voice chosen yet means the chooser is still up and there is nothing to
+    // send into. Never silently default here: the server would then store a
+    // choice the client never made.
+    if (!text || sending || !persona) return;
     setInput("");
     setError(null);
     setSending(true);
@@ -180,7 +208,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
           Authorization: `Bearer ${idToken}`,
           ...anonHeaders(),
         },
-        body: JSON.stringify({ quizId, message: text }),
+        body: JSON.stringify({ quizId, message: text, persona }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -211,6 +239,9 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
       });
       if (!res.ok) throw new Error("Couldn't clear this conversation");
       setMessages([]);
+      // The server drops the stored voice with the transcript, so the next
+      // conversation starts from the chooser rather than inheriting this one.
+      setPersona(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't clear this conversation");
     } finally {
@@ -219,6 +250,8 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
   }
 
   const empty = !loadingHistory && messages.length === 0;
+  /** Nothing said yet and no voice picked: the one state that blocks the composer. */
+  const choosing = empty && !persona;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
@@ -235,7 +268,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Discuss your ${title} routine with an AI consultant`}
+        aria-label={`Discuss your ${title} routine with Snuffy the Cosmetologist`}
         className="relative w-full sm:max-w-[560px] h-[88vh] sm:h-[min(660px,86vh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
       >
         {/* Header */}
@@ -247,7 +280,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
           </span>
           <div className="flex-1 min-w-0">
             <h2 className="font-head font-semibold text-[16px] leading-[1.2] tracking-[-0.01em] text-ss-ink m-0">
-              Your skincare consultant
+              Snuffy The Cosmetologist
             </h2>
             <p className="text-[12.5px] leading-[1.4] text-ss-ink-soft m-0 mt-[2px] truncate">
               {title}
@@ -278,10 +311,42 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
 
         {/* Conversation */}
         <div className="flex-1 min-h-0 overflow-y-auto px-[18px] py-4 grid content-start gap-3">
-          {empty && (
+          {choosing && (
             <div className="py-2">
               <p className="text-[14.5px] leading-[1.55] text-ss-ink m-0 mb-1 [text-wrap:pretty]">
-                Hi - I have your {title.toLowerCase()} routine in front of me.
+                Snuffy is a seal, a magical one, and a cosmetologist of many years&rsquo; standing.
+              </p>
+              <p className="text-[13.5px] leading-[1.55] text-ss-ink-soft m-0 mb-4 [text-wrap:pretty]">
+                How would you like him to talk to you? He knows your skin just as well either way -
+                this only changes his manner.
+              </p>
+              <div className="grid gap-2">
+                {CHAT_PERSONA_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPersona(id)}
+                    className="text-left px-[15px] py-[12px] rounded-2xl border border-ss-hairline-strong bg-ss-surface cursor-pointer hover:border-ss-accent hover:bg-ss-accent-tint transition-colors"
+                  >
+                    <span className="block font-head font-semibold text-[14px] leading-[1.25] text-ss-ink">
+                      {CHAT_PERSONA_META[id].label}
+                    </span>
+                    <span className="block text-[13px] leading-[1.45] text-ss-ink-soft mt-[3px] [text-wrap:pretty]">
+                      {CHAT_PERSONA_META[id].tagline}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] leading-[1.45] text-ss-ink-faint m-0 mt-3 [text-wrap:pretty]">
+                You can change your mind later with &ldquo;Clear chat&rdquo;.
+              </p>
+            </div>
+          )}
+
+          {empty && persona && (
+            <div className="py-2">
+              <p className="text-[14.5px] leading-[1.55] text-ss-ink m-0 mb-1 [text-wrap:pretty]">
+                {GREETINGS[persona](title.toLowerCase())}
               </p>
               <p className="text-[13.5px] leading-[1.55] text-ss-ink-soft m-0 mb-4 [text-wrap:pretty]">
                 Ask me anything about it: the steps, the products, how often to use something, or
@@ -346,14 +411,14 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
                 }
               }}
               rows={1}
-              placeholder="Ask about your routine..."
-              disabled={sending}
+              placeholder={choosing ? "Pick how Snuffy should talk first..." : "Ask about your routine..."}
+              disabled={sending || choosing}
               className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
             />
             <button
               type="button"
               onClick={() => void send(input)}
-              disabled={sending || !input.trim()}
+              disabled={sending || choosing || !input.trim()}
               aria-label="Send"
               className="shrink-0 w-10 h-10 rounded-full inline-flex items-center justify-center bg-ss-accent text-ss-on-accent border-none cursor-pointer transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
