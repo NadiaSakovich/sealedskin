@@ -10,52 +10,52 @@ const TYPE_METERS: Record<string, { oil: number; dryness: number }> = {
 };
 
 const TYPE_PROSE: Record<string, string> = {
-  dry: "Your answers point to dry skin. It produces little excess oil, which keeps shine and visible pores to a minimum - but it also means moisture escapes easily, so skin can feel tight, look a little dull, or flake, especially after cleansing or in cold, dry air.",
-  normal: "Your answers read as fairly normal, balanced skin. It isn\u2019t especially oily or dry, pores stay modest, and it generally tolerates products well - a stable, forgiving base that most routines can build on.",
-  combination: "Your answers point to combination skin. The T-zone - forehead, nose and chin - runs oilier and shinier, while your cheeks sit drier and more comfortable. That split is completely normal; it simply means different zones of your face want slightly different care.",
-  oily: "Your answers point to oily skin. The oil glands are quite active, so shine returns through the day, pores look more visible, and skin can lean toward congestion - but that same oil keeps skin supple and tends to slow the look of fine lines over time.",
+  dry: "Your answers point to dry skin. There isn\u2019t much oil on the surface, so shine and open pores are rarely your problem. Water is. It escapes faster than your skin can replace it, which is why things feel tight after washing and flake when the weather turns.",
+  normal: "Your answers read as normal, balanced skin. Not much oil, not much dryness, pores that stay out of the way, and a decent tolerance for whatever you put on it. That is a forgiving place to start from.",
+  combination: "Your answers point to combination skin. Your forehead, nose and chin run oily. Your cheeks don\u2019t. That split is common and completely normal, and it mostly means one product will never be right for your whole face at once.",
+  oily: "Your answers point to oily skin. The glands are busy, so shine comes back through the day and pores are easy to see. There is a real upside, though. Oily skin stays supple, and it tends to line later than dry skin does.",
 };
 
 const TYPE_SUBHEAD: Record<string, string> = {
-  dry: "Low oil, low moisture retention - comfort and hydration are the priority.",
-  normal: "Well balanced and resilient - easy to keep healthy.",
-  combination: "An oilier T-zone with drier cheeks - it wants balance, not extremes.",
-  oily: "Active oil and visible pores - clarity and balance are the priority.",
+  dry: "Low oil, and it struggles to hold water.",
+  normal: "Balanced, and hard to upset.",
+  combination: "Oily down the middle, drier at the edges.",
+  oily: "Busy oil glands and pores you can see.",
 };
 
 const SENS_PROSE: Record<string, string> = {
-  high: "Your skin is also quite reactive - redness, stinging or tightness come on easily, a sign the barrier is working overtime. Gentle, low-fragrance formulas and a slow, one-at-a-time approach to active ingredients will matter a lot for you.",
-  moderate: "Your skin reacts now and then to new products, so patch-testing and introducing stronger actives one at a time is wise - but you have reasonable tolerance overall.",
-  low: "Reassuringly, your skin rarely reacts, which gives you room to use more active ingredients - though it\u2019s still smart to introduce them gradually so you can spot what works.",
+  high: "It\u2019s also reactive. Redness and stinging turn up easily, which usually means the barrier is under strain. Skip fragrance where you can, and add new actives one at a time with a week in between.",
+  moderate: "It reacts to a new product now and then. Nothing dramatic. Patch-test the strong things and you\u2019ll be fine.",
+  low: "It almost never reacts, which gives you room to use stronger actives than most people can. Still add them one at a time, so you can tell what\u2019s working.",
 };
 
 const CONCERN_NOTES: Record<string, string> = {
-  acne: "which usually means oil and dead skin are clogging pores and tipping into inflammation",
-  congestion: "the blackheads and small bumps that form when pores trap oil and debris",
-  oil: "the surface shine that builds up as the day goes on",
-  dryness: "a sign your skin is short on water and struggling to hold onto it",
-  redness: "reactivity that points to a barrier in need of calming and support",
-  dullness: "a build-up of dead surface cells dimming your natural radiance",
-  darkspots: "lingering pigment, often left behind by past blemishes or sun exposure",
-  wrinkles: "the early lines that appear as collagen production gradually slows",
-  firmness: "a subtle loss of bounce as the skin\u2019s support structure softens",
-  pores: "pores that look larger when filled with oil or stretched over time",
-  texture: "an uneven, slightly rough surface that smoother cell turnover can refine",
-  undereye: "shadows and puffiness tied to thin under-eye skin, fluid and fatigue",
+  acne: "That usually means oil and dead skin are blocking pores and tipping into inflammation.",
+  congestion: "Those are pores holding onto oil and debris.",
+  oil: "That\u2019s surface shine building up through the day.",
+  dryness: "Your skin is short on water and struggling to keep hold of it.",
+  redness: "Reactivity like that points to a barrier that needs calming.",
+  dullness: "Dead surface cells build up and dim the light coming back off your skin.",
+  darkspots: "Pigment left behind by old blemishes, or by the sun.",
+  wrinkles: "Early lines show up as collagen production slows down.",
+  firmness: "The support structure underneath softens, and skin loses some bounce.",
+  pores: "Pores look bigger when they\u2019re full of oil, or have been stretched over time.",
+  texture: "A rough, uneven surface that faster cell turnover can smooth out.",
+  undereye: "Thin skin, fluid and tiredness, in some combination.",
 };
 
 function needsFromConcerns(ids: string[]): string[] {
   const out: string[] = [];
   const has = (x: string) => ids.includes(x);
   if (has("acne") || has("congestion") || has("oil") || has("pores"))
-    out.push("Keep pores clear and balance oil without stripping your skin");
-  if (has("dryness")) out.push("Replenish water and lock it in with barrier-supporting moisture");
-  if (has("redness")) out.push("Lead with soothing, fragrance-light formulas that calm reactivity");
+    out.push("Clear pores and settle oil, gently enough to keep the barrier intact");
+  if (has("dryness")) out.push("Put water back in, then seal it with a barrier moisturiser");
+  if (has("redness")) out.push("Calm the reactivity first, with fragrance-free formulas");
   if (has("dullness") || has("darkspots") || has("texture"))
-    out.push("Brighten and smooth with gentle, gradual exfoliation");
+    out.push("Brighten and smooth with slow, regular exfoliation");
   if (has("wrinkles") || has("firmness"))
-    out.push("Support collagen with targeted actives like retinoids and antioxidants");
-  if (has("undereye")) out.push("Treat the eye area gently with hydration and brightening");
+    out.push("Back up collagen with a retinoid and an antioxidant");
+  if (has("undereye")) out.push("Hydrate and brighten the eye area, gently");
   return out;
 }
 
@@ -103,7 +103,7 @@ export function analyzeSkin(
   if (md) behaviourBits.push(`by midday it\u2019s \u201c${md}\u201d`);
   if (eod) behaviourBits.push(`and by evening it looks \u201c${eod}\u201d`);
   const behaviour = behaviourBits.length
-    ? `In your own words, ${behaviourBits.join(", ")} - a pattern that fits ${typeLabel.toLowerCase()} skin well.`
+    ? `In your own words: ${behaviourBits.join(", ")}. That pattern is a good fit for ${typeLabel.toLowerCase()} skin.`
     : "";
 
   const chosen = CONCERNS.filter((c) => concernIds.includes(c.id));
@@ -114,35 +114,35 @@ export function analyzeSkin(
   if (chosen.length) {
     const topIdSet = tops.map((c) => c.id);
     const others = chosen.filter((c) => !topIdSet.includes(c.id));
-    let s = `The concerns you flagged sharpen the picture. `;
+    let s = `What you flagged narrows it down. `;
     if (tops.length >= 2) {
       const labels = tops.map((c) => c.label.toLowerCase());
       const last = labels[labels.length - 1];
       const head = labels.slice(0, -1).join(", ");
-      s += `Front of mind are ${head} and ${last} - ${CONCERN_NOTES[tops[0].id] || "the priorities we'll lead with"}.`;
+      s += `Top of the list are ${head} and ${last}. ${CONCERN_NOTES[tops[0].id] ?? ""}`;
     } else if (tops.length === 1) {
-      s += `Front of mind is ${tops[0].label.toLowerCase()} - ${CONCERN_NOTES[tops[0].id] || "a key focus for you"}.`;
+      s += `Top of the list is ${tops[0].label.toLowerCase()}. ${CONCERN_NOTES[tops[0].id] ?? ""}`;
     }
     if (others.length === 1) {
-      s += ` You also pointed to ${others[0].label.toLowerCase()}, ${CONCERN_NOTES[others[0].id] || ""}.`;
+      s += ` You also pointed to ${others[0].label.toLowerCase()}. ${CONCERN_NOTES[others[0].id] ?? ""}`;
     } else if (others.length > 1) {
       const list = others.map((c) => c.label.toLowerCase());
       const last = list.pop();
-      s += ` You also flagged ${list.join(", ")} and ${last} - all common companions to this skin type, and all very workable.`;
+      s += ` You also flagged ${list.join(", ")} and ${last}. All of them are common alongside this skin type, and all of them are workable.`;
     }
-    concernsPara = s;
+    concernsPara = s.replace(/\s+/g, " ").trim();
   } else {
     concernsPara =
-      "You didn\u2019t flag any specific concerns, which suggests your skin is in a fairly good place - so your routine can focus on maintaining its health and protecting it day to day.";
+      "You didn\u2019t flag anything specific, which usually means your skin is in decent shape. The routine below is built to keep it there.";
   }
 
   const needs: string[] = [];
-  if (type === "dry") needs.push("Replenish water and lock it in with barrier-supporting moisture");
-  if (type === "oily" || type === "combination") needs.push("Balance oil and keep pores clear without over-drying");
-  if (type === "normal") needs.push("Maintain balance with steady, gentle hydration");
-  if (sensitivity === "high") needs.push("Lead with soothing, fragrance-light formulas and introduce actives slowly");
+  if (type === "dry") needs.push("Put water back in, then seal it with a barrier moisturiser");
+  if (type === "oily" || type === "combination") needs.push("Bring oil down and keep pores clear, gently");
+  if (type === "normal") needs.push("Keep it steady with regular, light hydration");
+  if (sensitivity === "high") needs.push("Start with soothing, fragrance-free formulas and add actives slowly");
   needsFromConcerns(concernIds).forEach((n) => needs.push(n));
-  needs.push("Protect every result with daily broad-spectrum SPF");
+  needs.push("Protect all of it with broad-spectrum SPF, every day");
   const uniqueNeeds = [...new Set(needs)].slice(0, 5);
 
   const meters = [

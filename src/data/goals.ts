@@ -7,18 +7,18 @@ export const SKIN_GOALS: Goal[] = [
   { id: "bright", label: "Brighter, even tone", desc: "Less dullness & patchiness" },
   { id: "smooth", label: "Smoother texture", desc: "Refined, soft surface" },
   { id: "pores", label: "Smaller-looking pores", desc: "Tighter, cleaner pores" },
-  { id: "firm", label: "Firmer, younger look", desc: "More bounce & resilience" },
+  { id: "firm", label: "Firmer, younger look", desc: "More bounce" },
   { id: "balance", label: "Balanced, less oily", desc: "Shine under control" },
-  { id: "glow", label: "A healthy glow", desc: "Radiant, lit-from-within" },
+  { id: "glow", label: "A healthy glow", desc: "Skin that looks awake" },
   { id: "protect", label: "Prevent future damage", desc: "Guard against ageing & sun" },
   { id: "fade", label: "Fade dark spots", desc: "Even out marks & pigment" },
   { id: "simple", label: "A simple routine", desc: "Effective, low effort" },
 ];
 
 export const COMMITMENT_LEVELS: OptionLevel[] = [
-  { id: "minimal", label: "Keep it minimal", desc: "2-3 steps - in and out, every day", meta: "Essentials only" },
-  { id: "balanced", label: "A balanced routine", desc: "4-5 steps - a proper morning & evening", meta: "Most popular" },
-  { id: "thorough", label: "Go thorough", desc: "6+ steps - I enjoy the full ritual", meta: "Maximum results" },
+  { id: "minimal", label: "Keep it minimal", desc: "2-3 steps, in and out, every day", meta: "Essentials only" },
+  { id: "balanced", label: "A balanced routine", desc: "4-5 steps, a proper morning and evening", meta: "Most popular" },
+  { id: "thorough", label: "Go thorough", desc: "6+ steps. I enjoy the whole thing", meta: "The full ritual" },
 ];
 
 export const REGIONS: OptionLevel[] = [

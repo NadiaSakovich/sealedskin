@@ -377,7 +377,7 @@ export default function SkinQuiz() {
     } catch (err) {
       // Soft-fail: show a locally built routine so the user is never stuck.
       setAiResult(buildLocalResult(profile, analysis, CONCERNS, GOALS));
-      setAiError(err instanceof Error ? err.message : "AI unavailable - showing a standard routine.");
+      setAiError(err instanceof Error ? err.message : "AI unavailable. Showing the offline routine.");
     } finally {
       setBuilding(false);
     }
@@ -401,7 +401,7 @@ export default function SkinQuiz() {
         busy={building}
       />
       <span className="font-mono text-[11px] text-ss-ink-faint">
-        {source === "ai" ? "Personalised by AI" : aiError ? "Standard routine · AI unavailable" : "Standard routine"}
+        {source === "ai" ? "Personalised by AI" : aiError ? "Offline routine · AI unavailable" : "Offline routine"}
       </span>
     </div>
   );
@@ -452,10 +452,11 @@ export default function SkinQuiz() {
               Let&rsquo;s figure out your skin type
             </h1>
             <p className="text-[16px] leading-[1.55] text-ss-ink-soft max-w-[400px] mx-auto mb-[30px] [text-wrap:pretty]">
-              A few quick questions about how your skin behaves day to day. There are no wrong answers - just pick what sounds most like you.
+              Seven quick questions about how your skin behaves on a normal day. There are no wrong
+              answers. Pick whatever sounds most like you.
             </p>
             <Button onClick={() => go(1)}>Start <Arrow /></Button>
-            <div className="mt-4 text-[13px] text-ss-ink-faint">Takes about 1 minute</div>
+            <div className="mt-4 text-[13px] text-ss-ink-faint">About a minute</div>
           </div>
         </Screen>
       </Shell>
@@ -472,8 +473,8 @@ export default function SkinQuiz() {
             <div className={eyebrowClass}>Stage 2 of 3 · Concerns</div>
             <h1 className={introH1Class}>What would you like to improve?</h1>
             <p className={introPClass}>
-              Your skin type is set. Now tell us the concerns you actually notice - pick as many or as few as feel true.
-              This is what your routine will target.
+              Your skin type is set. Now tell us what you notice, as many or as few as you like.
+              This is what the routine will go after.
             </p>
             <div className="flex gap-[10px] justify-center flex-wrap">
               <Button variant="ghost" onClick={() => go(N, "back")}><Arrow back /> Back</Button>
@@ -494,7 +495,7 @@ export default function SkinQuiz() {
             <div>
               <div className={eyebrowClass}>Concerns</div>
               <h2 className={qH2Class}>What would you like to work on?</h2>
-              <p className={qHelpClass}>Select all that apply - there&rsquo;s no limit, and you can skip any.</p>
+              <p className={qHelpClass}>Select all that apply. There&rsquo;s no limit, and you can skip any.</p>
             </div>
             <CountPill active={!!concerns.length}>{concerns.length} selected</CountPill>
           </div>
@@ -518,7 +519,7 @@ export default function SkinQuiz() {
             <div>
               <div className={eyebrowClass}>Concerns</div>
               <h2 className={qH2Class}>Which matter most right now?</h2>
-              <p className={qHelpClass}>Choose up to three - we&rsquo;ll put these at the centre of your routine.</p>
+              <p className={qHelpClass}>Choose up to three. The routine gets built around them.</p>
             </div>
             <CountPill active={!!topConcerns.length}>{topConcerns.length} / 3</CountPill>
           </div>
@@ -557,7 +558,7 @@ export default function SkinQuiz() {
           <div className="mb-5">
             <div className={eyebrowClass}>Stage 3 of 3 · Preferences</div>
             <h2 className={qH2Class}>How involved should your routine be?</h2>
-            <p className={qHelpClass}>This sets how many steps we&rsquo;ll recommend - you can change it later.</p>
+            <p className={qHelpClass}>This sets how many steps we&rsquo;ll suggest. You can change it later.</p>
           </div>
           <CommitmentPicker levels={LEVELS} value={commitment} onChange={setCommitment} />
           <div className="flex items-center justify-between mt-6">
@@ -577,7 +578,7 @@ export default function SkinQuiz() {
           <div className="mb-5">
             <div className={eyebrowClass}>Preferences</div>
             <h2 className={qH2Class}>Any preference on where your skincare comes from?</h2>
-            <p className={qHelpClass}>We&rsquo;ll lean your product suggestions toward this - it doesn&rsquo;t change the routine itself.</p>
+            <p className={qHelpClass}>We&rsquo;ll lean the product picks this way. The routine itself stays the same.</p>
           </div>
           <CommitmentPicker levels={REGIONS} value={region} onChange={(v) => setRegion(v as RegionId)} />
           <div className="flex items-center justify-between mt-6">
@@ -660,7 +661,7 @@ export default function SkinQuiz() {
             <div className="mx-auto mb-6 w-9 h-9 rounded-full border-[3px] border-ss-hairline border-t-ss-accent animate-spin" />
             <div className="font-head font-semibold text-[20px] text-ss-ink mb-1">Building your routine</div>
             <p className="text-[14.5px] text-ss-ink-soft max-w-[320px] mx-auto [text-wrap:pretty]">
-              Consulting current products and the latest ingredient guidance - this takes a few seconds.
+              Looking up current products and prices. This takes a few seconds.
             </p>
           </div>
         </Screen>

@@ -312,7 +312,7 @@ export function ProfileView() {
         <div className="rounded-[14px] border border-ss-hairline bg-ss-surface px-[18px] py-7 text-center">
           <p className="font-head font-semibold text-[16px] text-ss-ink m-0 mb-1">No saved routines yet</p>
           <p className="text-[13.5px] leading-[1.5] text-ss-ink-soft m-0 mb-[16px] [text-wrap:pretty]">
-            Take the quiz and save your result - it&rsquo;ll show up here so you can come back to it any time.
+            Take the quiz and save the result. It&rsquo;ll show up here so you can come back to it any time.
           </p>
           <Link
             href="/"
@@ -354,7 +354,7 @@ export function ProfileView() {
                         )}
                       </span>
                       <span className="block text-[13px] leading-[1.4] text-ss-ink-soft mt-0.5 truncate">
-                        {concerns.length ? concerns.join(", ") : "Personalized routine"}
+                        {concerns.length ? concerns.join(", ") : "Personalised routine"}
                         {date && <span className="text-ss-ink-faint"> · {date}</span>}
                       </span>
                     </span>

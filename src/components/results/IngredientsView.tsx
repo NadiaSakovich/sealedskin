@@ -16,8 +16,8 @@ export function IngredientsView({
       <ResultsEyebrow step={2} />
       <h1 className={resHeadlineClass}>Ingredients &amp; actives to look for</h1>
       <p className={resIntroClass}>
-        These are the hero ingredients matched to your skin. Look for them on labels - you don&rsquo;t need all of them at once,
-        and a few well-chosen ones go a long way.
+        These are the ingredients matched to your skin. Look for them on the label. You don&rsquo;t need all of
+        them at once, and two or three chosen well will do more than seven chosen badly.
       </p>
 
       <div className="grid gap-3">

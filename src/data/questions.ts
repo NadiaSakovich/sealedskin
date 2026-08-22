@@ -51,7 +51,7 @@ export const SKIN_TYPE_QUESTIONS: Question[] = [
       { id: "often", label: "Often", desc: "Tight or flaky most days, worse after cleansing.", signal: "dry", photo: "flaking" },
       { id: "patches", label: "Sometimes, in patches", desc: "A few dry spots while other areas feel oily.", signal: "combination", photo: "dry patches" },
       { id: "rarely", label: "Rarely", desc: "Skin usually feels comfortable.", signal: "normal", photo: "comfortable" },
-      { id: "never", label: "Almost never - more oily", desc: "Tightness isn't really a problem for me.", signal: "oily", photo: "never tight" },
+      { id: "never", label: "Almost never, I'm more oily", desc: "Tightness isn't really a problem for me.", signal: "oily", photo: "never tight" },
     ],
   },
   {
@@ -86,13 +86,13 @@ export const SKIN_TYPE_QUESTIONS: Question[] = [
     noPhoto: true,
     eyebrow: "Skin type",
     title: "Which age range are you in?",
-    help: "Your skin\u2019s priorities shift over time - this helps us tailor the actives.",
+    help: "What skin needs shifts over time. This helps us pick the right actives.",
     options: [
-      { id: "under18", label: "Under 18", desc: "Often oilier, breakout-prone", signal: "age", age: "under18" },
+      { id: "under18", label: "Under 18", desc: "Often oilier and breakout-prone", signal: "age", age: "under18" },
       { id: "18to24", label: "18-24", desc: "Prevention and good habits", signal: "age", age: "18to24" },
       { id: "25to34", label: "25-34", desc: "First fine lines, early maintenance", signal: "age", age: "25to34" },
       { id: "35to44", label: "35-44", desc: "Firmness and renewal matter more", signal: "age", age: "35to44" },
-      { id: "45plus", label: "45+", desc: "Nourishment, repair and resilience", signal: "age", age: "45plus" },
+      { id: "45plus", label: "45+", desc: "Nourishment and repair", signal: "age", age: "45plus" },
     ],
   },
   {
@@ -102,7 +102,7 @@ export const SKIN_TYPE_QUESTIONS: Question[] = [
     optional: true,
     eyebrow: "Skin type",
     title: "Do any of these apply to you right now?",
-    help: "Some active ingredients are best avoided during pregnancy or breastfeeding. This stays private and only fine-tunes what we suggest.",
+    help: "Some actives are best avoided during pregnancy or breastfeeding. This stays private and only changes what we suggest.",
     options: [
       { id: "none", label: "None of these", desc: "No restrictions needed", preg: "no" },
       { id: "pregnant", label: "I\u2019m pregnant", desc: "We\u2019ll avoid actives to skip in pregnancy", preg: "pregnant" },

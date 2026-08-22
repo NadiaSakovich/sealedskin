@@ -2,56 +2,56 @@ import type { Active, Profile, ScoredActive, Routine, RoutineStep, Concern, Goal
 
 export const ACTIVES: Active[] = [
   { id: "spf", name: "Broad-spectrum SPF", aka: "Mineral or hybrid, SPF 30-50", type: "Sunscreen",
-    what: "Shields skin from UV - the main driver of dark spots, fine lines and lost firmness.",
-    why: "The single most effective step for protecting your skin and every result you build.",
+    what: "UV does most of the visible damage to skin. Sunscreen is what stops it.",
+    why: "Nothing else you use works as hard. Skip it and you undo the rest.",
     for: ["everyone", "protect"], gentle: true },
   { id: "vitc", name: "Vitamin C", aka: "L-ascorbic acid or derivatives", type: "Antioxidant serum",
-    what: "A daytime antioxidant that neutralises pollution and brightens with use.",
-    why: "Lifts dullness, softens dark marks and brings back a natural glow.",
+    what: "A morning antioxidant. It mops up the damage that daylight and pollution leave behind.",
+    why: "Dullness lifts and old marks fade. Give it a few months.",
     for: ["dullness", "darkspots", "bright", "glow", "protect"], gentle: true },
   { id: "niacinamide", name: "Niacinamide", aka: "Vitamin B3", type: "Balancing serum",
-    what: "A gentle all-rounder that regulates oil, strengthens the barrier and evens tone.",
-    why: "Calms shine and redness while quietly refining pores and marks.",
+    what: "The quiet all-rounder. It settles oil, shores up the barrier and evens out tone.",
+    why: "Almost nobody reacts to it, and it gets along with everything else in the routine.",
     for: ["oil", "pores", "redness", "dullness", "darkspots", "balance", "calm"], gentle: true },
   { id: "salicylic", name: "Salicylic acid", aka: "BHA", type: "Exfoliating treatment",
-    what: "An oil-soluble acid that gets inside pores to clear oil and dead skin.",
-    why: "Keeps breakouts and blackheads in check and refines congested skin.",
+    what: "An acid that dissolves in oil, which lets it work inside a clogged pore.",
+    why: "The one to reach for when blackheads keep coming back.",
     for: ["acne", "congestion", "oil", "pores", "texture"], gentle: false, avoidInPregnancy: true },
   { id: "benzoyl", name: "Benzoyl peroxide", aka: "2.5-5%", type: "Spot treatment",
-    what: "Kills the bacteria behind inflamed breakouts.",
-    why: "Targets active, stubborn spots directly.",
+    what: "Kills the bacteria that turn a clogged pore into an angry spot.",
+    why: "Fast on inflamed breakouts. It bleaches towels and pillowcases, so keep it off the good ones.",
     for: ["acne"], gentle: false, avoidInPregnancy: true },
   { id: "azelaic", name: "Azelaic acid", aka: "10-15%", type: "Targeted serum",
-    what: "A gentle multitasker for redness, breakouts and pigment.",
-    why: "A calmer route to clearer, more even skin - kind to sensitive types.",
+    what: "A mild acid that works on redness, spots and pigment at the same time.",
+    why: "Slower than a retinoid and much easier to live with. Good if your skin flares.",
     for: ["redness", "darkspots", "acne", "calm", "dullness"], gentle: true },
   { id: "retinoid", name: "Retinol / Retinoid", aka: "Vitamin A", type: "Renewing treatment",
-    what: "Speeds cell turnover and stimulates collagen as it renews skin.",
-    why: "The gold-standard active for lines, firmness, texture and stubborn breakouts.",
+    what: "Speeds up how fast skin renews itself and nudges it into making more collagen.",
+    why: "The best-studied anti-ageing ingredient there is. Also the one most likely to make you peel in week two.",
     for: ["wrinkles", "firmness", "texture", "acne", "darkspots", "25to34", "35to44", "45plus"], gentle: false, avoidInPregnancy: true },
   { id: "aha", name: "Glycolic / Lactic acid", aka: "AHA", type: "Exfoliating treatment",
-    what: "A surface exfoliant that sweeps away dull, rough dead skin.",
-    why: "Smooths texture and brings back brightness and even tone.",
+    what: "A surface exfoliant. It loosens the dull, dead layer sitting on top.",
+    why: "Skin looks brighter and feels smoother inside a couple of weeks.",
     for: ["texture", "dullness", "darkspots", "smooth"], gentle: false },
   { id: "peptides", name: "Peptides", aka: "Signal peptides", type: "Firming serum",
-    what: "Amino-acid messengers that prompt skin to firm and repair.",
-    why: "Supports bounce and resilience - gentle enough for most routines.",
+    what: "Short chains of amino acids that signal skin to firm and repair.",
+    why: "Mild enough to layer with anything. The results are quiet ones.",
     for: ["firmness", "wrinkles", "35to44", "45plus"], gentle: true },
   { id: "ha", name: "Hyaluronic acid", aka: "Humectant", type: "Hydrating serum",
-    what: "Draws water into the skin for instant plumping and comfort.",
-    why: "Tops up hydration so skin looks fuller and feels less tight.",
+    what: "A humectant. It pulls water into the upper layers of skin.",
+    why: "Plumping, straight away. Put it on damp skin and seal it with moisturiser, or it will dry you out.",
     for: ["dryness", "hydration", "dry"], gentle: true },
   { id: "ceramides", name: "Ceramides", aka: "Barrier lipids", type: "Barrier moisturiser",
-    what: "Replenish the natural lipids that seal moisture in.",
-    why: "Reinforces a dry or reactive barrier so it holds water and calms down.",
+    what: "The lipids your skin barrier is built from, put back.",
+    why: "If your skin is tight, flaky or reacting to everything, start here.",
     for: ["dryness", "redness", "calm", "dry"], gentle: true },
   { id: "cica", name: "Centella (Cica)", aka: "Centella asiatica", type: "Soothing serum",
-    what: "A soothing botanical that calms irritation and supports healing.",
-    why: "Settles redness and reactivity, especially alongside stronger actives.",
+    what: "Centella extract. It calms irritation and helps skin repair itself.",
+    why: "Worth having alongside a retinoid or an acid, for the weeks things get angry.",
     for: ["redness", "calm"], gentle: true },
   { id: "squalane", name: "Squalane", aka: "Lightweight emollient", type: "Facial oil",
-    what: "A skin-like oil that softens and reinforces the barrier without grease.",
-    why: "Locks in moisture and comfort - ideal for dry or depleted skin.",
+    what: "A light oil close to what skin makes itself. Softens with no greasy film.",
+    why: "A good last layer for dry skin that still feels tight after moisturiser.",
     for: ["dryness", "balance", "dry"], gentle: true },
 ];
 
@@ -149,59 +149,59 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
   const am: RoutineStep[] = [];
   const pm: RoutineStep[] = [];
 
-  am.push({ type: cleanser, active: null, note: "Start clean without stripping" });
+  am.push({ type: cleanser, active: null, note: "Lifts off the night\u2019s oil and sweat" });
   // Daytime serums scale with how involved the routine is: minimal sticks to the
   // essentials (cleanse, moisturise, protect), balanced adds one targeted serum,
   // thorough layers several.
   if (!min) {
     const amSerums: RoutineStep[] = [];
-    if (ids.has("vitc")) amSerums.push({ type: "Antioxidant serum", active: "Vitamin C", note: "Brightens and defends through the day" });
-    if (ids.has("niacinamide")) amSerums.push({ type: "Balancing serum", active: "Niacinamide", note: "Evens tone, keeps oil in check" });
-    if (ids.has("ha")) amSerums.push({ type: "Hydrating serum", active: "Hyaluronic acid", note: "Plumps and preps for moisturiser" });
+    if (ids.has("vitc")) amSerums.push({ type: "Antioxidant serum", active: "Vitamin C", note: "Antioxidant cover for the day ahead" });
+    if (ids.has("niacinamide")) amSerums.push({ type: "Balancing serum", active: "Niacinamide", note: "Evens tone and keeps oil down" });
+    if (ids.has("ha")) amSerums.push({ type: "Hydrating serum", active: "Hyaluronic acid", note: "Water first, moisturiser to seal it" });
     amSerums.slice(0, full ? 3 : 1).forEach((s) => am.push(s));
   }
   // Minimal closes the morning with ONE moisturising sunscreen instead of a
   // moisturiser step followed by an SPF step; everything else keeps them separate.
   if (min) {
-    am.push({ type: MOISTURISING_SPF_STEP, active: "Broad-spectrum SPF 30-50", note: "Hydrates and protects in one - never skip it", spf: true });
+    am.push({ type: MOISTURISING_SPF_STEP, active: "Broad-spectrum SPF 30-50", note: "Moisturiser and SPF in one step. Never skip it", spf: true });
   } else {
     am.push({ type: moistAM, active: type === "dry" && ids.has("ceramides") ? "Ceramides" : null, note: "Locks in hydration" });
-    am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30-50", note: "Never skip - protects every result", spf: true });
+    am.push({ type: "Sunscreen", active: "Broad-spectrum SPF 30-50", note: "The step that protects every other step", spf: true });
   }
 
   const amHasSPF = am.some((s) => s.spf);
   if (amHasSPF && !min) {
-    pm.push({ type: "Oil cleanser or balm", active: null, note: "First cleanse - melts away SPF, makeup and grime" });
-    pm.push({ type: cleanser, active: null, note: "Second cleanse - washes the skin underneath" });
+    pm.push({ type: "Oil cleanser or balm", active: null, note: "First cleanse. Melts off sunscreen and makeup" });
+    pm.push({ type: cleanser, active: null, note: "Second cleanse. Washes the skin underneath" });
   } else {
     pm.push({ type: cleanser, active: null, note: "Remove the day gently" });
   }
 
   const exf = ids.has("salicylic")
-    ? { active: "Salicylic acid (BHA)", note: "Clears pores - 2-3 nights a week" }
+    ? { active: "Salicylic acid (BHA)", note: "Clears pores. Two or three nights a week" }
     : ids.has("aha")
-    ? { active: "Glycolic / Lactic acid (AHA)", note: "Smooths and brightens - 2 nights a week" }
+    ? { active: "Glycolic / Lactic acid (AHA)", note: "Smooths and brightens. Two nights a week" }
     : null;
   if (exf && !min) pm.push({ type: "Exfoliating treatment", active: exf.active, note: exf.note });
 
   if (ids.has("retinoid"))
-    pm.push({ type: "Renewing treatment", active: "Retinol / Retinoid", note: sensitive ? "Start 1-2 nights a week, buffer with moisturiser" : "Build to most nights - not the same night as acids" });
+    pm.push({ type: "Renewing treatment", active: "Retinol / Retinoid", note: sensitive ? "Start one or two nights a week, over moisturiser" : "Build up to most nights. Never on an acid night" });
   else if (ids.has("benzoyl") && !exf)
     pm.push({ type: "Spot treatment", active: "Benzoyl peroxide", note: "Dab on active breakouts only" });
 
   if ((full || sensitive) && ids.has("azelaic")) pm.push({ type: "Targeted serum", active: "Azelaic acid", note: "Calms redness and fades marks" });
-  else if ((full || sensitive) && ids.has("cica")) pm.push({ type: "Soothing serum", active: "Centella (Cica)", note: "Settles redness, supports the barrier" });
+  else if ((full || sensitive) && ids.has("cica")) pm.push({ type: "Soothing serum", active: "Centella (Cica)", note: "Settles redness and shores up the barrier" });
 
   if (ids.has("ha") && !min) pm.push({ type: "Hydrating serum", active: "Hyaluronic acid", note: "Replenishes water overnight" });
   pm.push({ type: moistPM, active: type === "dry" && ids.has("ceramides") ? "Ceramides" : null, note: "Seals everything in as you sleep" });
-  if (type === "dry" && full && ids.has("squalane")) pm.push({ type: "Facial oil", active: "Squalane", note: "Final layer for lasting comfort" });
+  if (type === "dry" && full && ids.has("squalane")) pm.push({ type: "Facial oil", active: "Squalane", note: "The last layer, for skin that still feels tight" });
 
   const notes: string[] = [];
   if (["pregnant", "planning", "breastfeeding"].includes(profile.pregnancy ?? ""))
-    notes.push("We\u2019ve left out retinoids and other actives best avoided during pregnancy or nursing - always confirm with your doctor.");
-  if (ids.has("retinoid") && exf) notes.push("Alternate your retinoid and exfoliating acid on different nights - never both at once.");
-  if (sensitive) notes.push("Introduce one new active at a time and patch-test first - your skin reacts easily.");
-  notes.push("Give any new routine 6-8 weeks of consistency before judging results.");
+    notes.push("We\u2019ve left out retinoids and the other actives usually avoided in pregnancy or while nursing. Confirm anything new with your doctor.");
+  if (ids.has("retinoid") && exf) notes.push("Use your retinoid and your acid on different nights. Never both at once.");
+  if (sensitive) notes.push("Your skin reacts easily. Add one new active at a time and patch-test it first.");
+  notes.push("Give this six to eight weeks before you judge it.");
 
   // A minimal routine promises "2–3 steps" — hold it to that in both halves of
   // the day, even when several actives scored well.
@@ -211,20 +211,35 @@ export function buildRoutine(profile: Profile, picked: ScoredActive[]): Routine 
 
 export function needsSummary(profile: Profile, analysis: Analysis): { paragraph: string; needs: string[] } {
   const t = analysis.typeLabel.toLowerCase();
-  const sens = profile.sensitivity === "high";
-  let lead = `Your skin reads as ${t}${sens ? ", with a reactive, sensitive streak" : ""}. `;
+  // Assembled as whole sentences rather than a running string: the old version
+  // appended a comma and then a full stop when only one concern was picked,
+  // which rendered as "Front of mind is acne, ."
+  const sentences: string[] = [
+    profile.sensitivity === "high"
+      ? `Your skin reads as ${t}, and it reacts easily.`
+      : `Your skin reads as ${t}.`,
+  ];
+
   if (profile.topConcernLabel) {
-    lead += `Front of mind is ${profile.topConcernLabel.toLowerCase()}, `;
-    lead += profile.concernCount > 1 ? `alongside a few related concerns. ` : `. `;
+    const top = profile.topConcernLabel.toLowerCase();
+    sentences.push(
+      profile.concernCount > 1
+        ? `Top of the list is ${top}, with a few related things behind it.`
+        : `Top of the list is ${top}.`,
+    );
   } else {
-    lead += `It\u2019s in fairly good shape, so the focus is on keeping it healthy. `;
+    sentences.push("Nothing much is bothering you, so the routine below is about keeping it that way.");
   }
+
   if (profile.age && AGE_LABELS[profile.age]) {
-    lead += `Being ${AGE_LABELS[profile.age]}, ${
-      profile.age === "under18" || profile.age === "18to24"
-        ? "prevention and gentle balance matter most right now."
-        : "supporting firmness and renewal becomes increasingly worthwhile."
-    }`;
+    sentences.push(
+      profile.age === "under18"
+        ? "While you\u2019re still in your teens, habits matter more than ingredients."
+        : profile.age === "18to24"
+        ? `At ${AGE_LABELS[profile.age]}, what you do now saves you work later.`
+        : `At ${AGE_LABELS[profile.age]}, firmness and renewal start to matter.`,
+    );
   }
-  return { paragraph: lead.trim(), needs: analysis.needs };
+
+  return { paragraph: sentences.join(" "), needs: analysis.needs };
 }

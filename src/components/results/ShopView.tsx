@@ -78,7 +78,7 @@ function ShopStep({ step, products }: { step: RoutineStep; products: ShopProduct
         // The step still belongs in the routine, so never silently drop it — say so
         // plainly when no current picks came back for it.
         <p className="text-[12.5px] leading-[1.45] text-ss-ink-faint m-0 px-[13px] py-[10px] rounded-[11px] bg-ss-surface border border-ss-hairline [text-wrap:pretty]">
-          No current picks to show for this step - any well-formulated {step.type.toLowerCase()} suited to your skin works here.
+          Nothing to show for this step right now. Any well-formulated {step.type.toLowerCase()} that suits your skin will do.
         </p>
       )}
     </div>
@@ -177,9 +177,9 @@ export function ShopView({
       <ResultsEyebrow step={4} />
       <h1 className={resHeadlineClass}>Products for your routine</h1>
       <p className={resIntroClass}>
-        A few picks at different budgets for every step
-        {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : " - a mix from around the world"}. Brands are
-        examples of the right <em>type</em> of product, not endorsements, and prices are approximate.
+        Three picks at different prices for every step
+        {region && region !== "none" && regionLabel ? `, leaning toward ${regionLabel.toLowerCase()} brands` : ", from a mix of countries"}. These are
+        examples of the right <em>type</em> of product. Buy whichever version you can find. Prices are approximate.
       </p>
 
       <div className="grid gap-[30px]">
@@ -188,7 +188,7 @@ export function ShopView({
       </div>
 
       <div className="mt-[22px] text-[12.5px] leading-[1.5] text-ss-ink-faint font-mono [text-wrap:pretty]">
-        Always patch-test new products and check the full ingredient list against any sensitivities.
+        Patch-test anything new, and read the full ingredient list if you react to things.
       </div>
 
       {saveSlot}

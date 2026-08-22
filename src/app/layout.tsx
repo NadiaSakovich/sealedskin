@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SealedSkin - Build your skincare routine",
   description:
-    "A guided quiz that analyzes your skin and builds a personalized AM/PM skincare routine.",
+    "A guided quiz that analyses your skin and builds a personalised morning and evening routine.",
 };
 
 export default function RootLayout({

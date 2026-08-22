@@ -56,8 +56,8 @@ export function AnalysisView({ result, onContinue, onBack, onEditSkin }: Props) 
       </div>
 
       <p className="text-[14.5px] leading-[1.55] text-ss-ink-soft mt-6 mb-0 [text-wrap:pretty]">
-        Next, you&rsquo;ll set a few preferences - how involved you want your routine to be and what suits you - and we&rsquo;ll turn
-        this whole picture into a routine built for your skin.
+        Two preferences left: how many steps you want, and where you&rsquo;d like the brands to come
+        from. Then we turn all of this into a routine.
       </p>
 
       <div className="flex items-center justify-between mt-6">
