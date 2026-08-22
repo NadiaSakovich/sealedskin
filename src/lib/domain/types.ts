@@ -170,7 +170,7 @@ export interface SkincareRoutine {
   /** e.g. "Combination, dehydrated". */
   skinType: string;
   primaryConcerns: string[];
-  /** Short, personalized overview shown at the top of the results. */
+  /** Short, personalised overview shown at the top of the results. */
   summary: string;
   amRoutine: RoutineStep[];
   pmRoutine: RoutineStep[];

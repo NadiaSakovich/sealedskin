@@ -35,7 +35,7 @@ export function NeedsSummary({
   return (
     <div className="py-0.5">
       <ResultsEyebrow step={1} />
-      <h1 className={resHeadlineClass}>Here&rsquo;s what your skin is asking for</h1>
+      <h1 className={resHeadlineClass}>What your skin needs</h1>
 
       <div className="flex flex-wrap gap-[7px] mb-5">
         {chips.map((c, i) => (

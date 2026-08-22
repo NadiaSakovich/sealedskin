@@ -81,7 +81,7 @@ other actives best avoided then, and note it.
 - Introduce actives (retinoids, exfoliating acids, vitamin C) cautiously; note \
 frequency and conflicts (don't combine a retinoid and an acid the same night).
 - Brands are EXAMPLES of the right kind of product, never endorsements. Include a \
-brief note that this is general guidance, not medical advice.`;
+brief note that this is general guidance and no substitute for a dermatologist.`;
 
 /**
  * The price ceiling on suggested products. Our users are building a first
@@ -98,17 +98,39 @@ $35-$${MAX_PRODUCT_PRICE}), NOT luxury skincare.
 - Prefer well-reviewed, widely sold products people can actually re-buy.`;
 
 /**
- * House style for the copy the model writes. Only the dash rule really matters:
- * an em dash is the tell readers pick up on as "an AI wrote this", and all of
- * our own hardcoded copy uses plain hyphens, so the model's should match.
- * `stripLongDashes()` in `lib/ai/result.ts` enforces it deterministically -
- * prompt for the habit, enforce for the guarantee.
+ * House style for the copy the model writes.
+ *
+ * The em dash used to be the whole of this block, on the theory that the glyph
+ * is what readers register as "an AI wrote this". It isn't. Banning the
+ * character only moved the habit: the model kept writing `claim - restatement
+ * of the claim`, kept reaching for "X, not Y", and kept listing everything in
+ * threes, which is what the tell actually sounds like. So the constructions are
+ * named here too, and the word list catches the rest.
+ *
+ * `stripLongDashes()` in `lib/ai/result.ts` still enforces the dash rule
+ * deterministically: prompt for the habit, enforce for the guarantee. The
+ * sentence rules have no such backstop, so they are stated bluntly.
+ *
+ * Spelling is here because the rest of the product is en-GB and the model
+ * defaults to en-US, which would drop "moisturizer" into a page that otherwise
+ * says "moisturiser" - the same mixed-orthography tell, regenerated on every
+ * run.
  */
 export const STYLE_RULES = `Writing style:
-- Write plainly, the way a knowledgeable person would talk, not like marketing copy.
-- Use ONLY the plain hyphen "-" for punctuation. NEVER use an em dash or an en \
-dash. Prefer a comma, a full stop or brackets where you would reach for one.
-- Write number ranges with a hyphen (SPF 30-50, 2-3 nights a week).`;
+- Write the way a knowledgeable friend talks. Short sentences. Vary their length.
+- Use ONLY the plain hyphen "-". NEVER an em dash or an en dash. Write number \
+ranges with a hyphen (SPF 30-50, 2-3 nights a week).
+- Do NOT end a sentence with a hyphen followed by a restatement of what you \
+just said. Write two sentences instead.
+- Do NOT use the "X, not Y" or "rather than" construction. Say the positive \
+thing and stop.
+- Avoid three-item lists. Two is usually enough, and one specific thing is \
+better than three vague ones.
+- Never use the words: actually, simply, truly, honest, journey, elevate, \
+unlock, powerhouse, game-changer.
+- Do not open a sentence with "Think of it as" or "It's not just".
+- Use British spelling (moisturiser, personalised, analyse, colour). Product \
+names keep the spelling printed on the bottle.`;
 
 /**
  * How to read the "Region preference" answer. The user is choosing where the
@@ -298,7 +320,7 @@ export async function buildRoutine(
     { role: "system", content: RESEARCH_SYSTEM + minimalRules },
     {
       role: "user",
-      content: `Here is the user's profile and quiz answers:\n\n${profile}\n\nResearch and write their personalized skincare brief.`,
+      content: `Here is the user's profile and quiz answers:\n\n${profile}\n\nResearch and write their personalised skincare brief.`,
     },
   ];
   const brief = await provider.generate(research, {

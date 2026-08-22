@@ -79,8 +79,8 @@ export function FinaleScreen({
         </h1>
         <p className="text-[16px] leading-[1.55] text-ss-ink-soft max-w-[410px] mx-auto mb-0 [text-wrap:pretty]">
           {review
-            ? "Here’s the profile behind this saved routine. Review the routine, edit your answers, or head back to your account."
-            : "Here’s everything you told us. Review it, tweak anything, then build your routine."}
+            ? "This is the profile behind your saved routine. Look it over, change an answer, or head back to your account."
+            : "This is everything you told us. Change anything that looks wrong, then build the routine."}
         </p>
       </div>
 
@@ -157,7 +157,7 @@ export function FinaleScreen({
             </Button>
             {review.changed && (
               <p className="text-[12.5px] text-ss-ink-faint mt-[10px] [text-wrap:pretty]">
-                You changed your answers - rebuild to refresh the routine.
+                You changed your answers. Rebuild to refresh the routine.
               </p>
             )}
           </div>

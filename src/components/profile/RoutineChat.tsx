@@ -346,7 +346,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
                 }
               }}
               rows={1}
-              placeholder="Ask about your routine…"
+              placeholder="Ask about your routine..."
               disabled={sending}
               className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
             />
