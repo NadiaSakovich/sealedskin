@@ -320,9 +320,110 @@ PUTs in place), snapshots the loaded submission as `editOriginal`, and lands on 
   external-sync effect). Signed-out state is handled by a render guard, not by clearing state in the
   effect.
 
-### "Discuss with AI" - the routine chat
+### "Discuss with Snuffy" - the routine chat
 
-The **main** routine's card carries a filled accent pill, **"Discuss with AI"**, where the secondary
+The assistant is a character: **Snuffy the Cosmetologist**, a seal (a magical one) who works as a
+cosmetologist. The chat window is headed **"Snuffy The Cosmetologist"**.
+
+**Two voices, chosen by the user.** An empty conversation opens on a chooser rather than a greeting:
+**Warm and encouraging** or **Dry and direct**. Only the *manner* differs - the expertise, the
+product quality bar and every safety rule are shared, and the chooser copy says so ("He knows your
+skin just as well either way"). The two personalities exist because the character was described
+twice, differently, and picking one would have thrown away a good version of him.
+
+- `lib/ai/personas.ts` - the whitelist (`CHAT_PERSONA_IDS`, `isChatPersonaId`,
+  `DEFAULT_CHAT_PERSONA = "warm"`) plus the UI labels. Deliberately **zero imports**, so the client
+  bundle can read the labels without pulling in `chat.ts` -> `agent.ts` -> the product catalogue, and
+  so **the system prompt is never shipped to the browser**. Same shape as `ALLOWED_MODELS`: the
+  browser names a persona, it never supplies one.
+- `lib/ai/chat.ts` splits the prompt in three. `SNUFFY_CORE` (who he is) and `SHARED_RULES` (scope,
+  the product bar, the imported price/region/safety/style blocks) are identical for both voices;
+  only `PERSONA_VOICES[id]` differs. `buildChatSystem(persona)` composes them.
+- **The safety rules live in the shared block on purpose.** Both voices have a register that can land
+  badly at the wrong moment, so "WHEN TO DROP THE VOICE COMPLETELY" (pregnancy/nursing, anything that
+  sounds medical, a client upset about their skin) is written **once** rather than twice and drifting
+  apart. The same goes for the **refusal register**: declining is where sarcasm is most tempting and
+  worst received, so a refusal is respectful in *either* voice.
+- **Persistence:** the choice is stored as `chatPersona` on the routine document (it belongs to the
+  conversation, not to a turn) and returned by `GET`, so reopening the window resumes in the same
+  voice. `POST` resolves request -> stored -> default. **`DELETE` clears it with the transcript**, so
+  "Clear chat" is also how you change your mind about the voice.
+- Verified: `buildChatSystem` unit-tested for both ids (all shared markers present in both, neither
+  voice leaks into the other, non-voice text byte-identical, 0 long dashes); Playwright drive of the
+  real UI (chooser renders, composer is inert until you pick, `persona` rides on the POST body,
+  Clear chat returns to the chooser, both greetings, light + dark, 0 console errors).
+
+**Gotcha - a Firestore batch gives every write the SAME commit timestamp.** Both messages of a turn
+are written in one batch with `FieldValue.serverTimestamp()`, so `orderBy("createdAt", "asc")` cannot
+separate the question from its answer and falls back to breaking the tie by **random document id**.
+About half of all turns were therefore read back as `[assistant, user]`.
+
+The symptom was not cosmetic and did not look like a sorting bug: a reversed turn puts two user
+messages side by side in the transcript replayed to the model, with the older one looking
+unanswered, so **the model answered the previous question again before getting to the new one**.
+Every reply echoed the one before it.
+
+- `lib/domain/chatOrder.ts` - `byConversationOrder()`. A `createdAt` tie can only ever be the two
+  halves of one batch, and the question is always the first half, so the rule is exact rather than
+  heuristic. Two messages of the same role cannot tie, so it returns 0 and the (stable) sort leaves
+  Firestore's order. A `null` timestamp means a server value that has not materialised, which only
+  happens for a write that has just landed, so it sorts **newest**.
+- **Fixed on the READ side on purpose.** Distinct write timestamps or a sequence field would only fix
+  new messages and leave every stored conversation permanently scrambled. Sorting on read repairs the
+  existing ones with no migration.
+- **The 40-message trim had the same root cause** and is fixed with it: it re-ran
+  `orderBy("createdAt").limit(n)`, so it could delete a question and keep its answer, leaving a
+  dangling half-turn. It now deletes by id from the already-ordered `history`, which also saves a
+  read.
+- Unit-tested over 6 orderings (reversed turn, already-correct, pending timestamp, both pending,
+  same-role tie, four consecutive reversed turns), plus an assertion that no two user messages end up
+  adjacent.
+
+**Scope is SKINCARE, not just this routine.** The first version fenced Snuffy to "ONLY this client's
+saved routine and what bears directly on it", which made him refuse things he should obviously help
+with - most visibly, a client whose routine leans European asking about a Korean product got turned
+down. The boundary is now:
+- **In scope:** the client's skin and skincare generally, with their saved routine as the anchor and
+  usual starting point. Ingredients, brands, technique, a concern they have not raised before, a
+  product they are curious about.
+- **Stored preferences are DEFAULTS, not a cage.** Region, budget and commitment describe how the
+  routine was built; they do not limit what may be asked. `REGION_RULES` gets a chat-only rider
+  saying so (mirroring the `PRICE_RULES` rider above it): never refuse a product question because the
+  brand is from the "wrong" region.
+- **Out of scope** is anything not about skin: relationships, work, current events, general
+  knowledge, code. Declined in one sentence, respectfully, as before - and the prompt now says
+  explicitly that refusing is not a way to dodge a skincare question that steps outside the saved
+  preferences.
+- **Edges** (sleep, stress, diet, hormones, hard water, weather, makeup) are in scope insofar as they
+  bear on THIS client's skin; a general lecture on nutrition is not.
+
+Third instance of the same bug class, after the three-item list and the per-reply disclaimer: a rule
+written for the routine builder - where the user is not present to ask for an exception - inherited
+by a conversation, where they are.
+
+**No per-reply disclaimer.** `SAFETY_RULES` used to end with "Include a brief note that this is
+general guidance and no substitute for a dermatologist" - a rule about a DOCUMENT, inherited by a
+conversation, where it meant "say this every time you speak". Snuffy duly closed **every** reply with
+it. Split into `ROUTINE_DISCLAIMER_RULE` (exported from `agent.ts`, appended to the two routine
+prompts only); the chat prompt instead says not to end on a standing disclaimer, since the window
+already shows one permanently under the message box. Enforced as well as prompted:
+`stripTrailingDisclaimer()` in `chat.ts` drops a trailing boilerplate sentence.
+- It matches **stock phrases** ("general guidance", "not a substitute", "does not replace", "not
+  medical advice"), never the act of recommending a doctor - "please see a dermatologist about that"
+  has none of those markers and survives untouched. That distinction is the whole point: the referral
+  is the most important thing Snuffy says.
+- **Sentence-level, last block only.** A reply ending "...see a dermatologist. This is general
+  guidance and no substitute for one." keeps the first sentence and drops the second. A reply that is
+  ONLY a disclaimer is left alone - that is a refusal to advise, which is content.
+- Unit-tested over 7 cases including a genuine referral, a merged referral+boilerplate, and a
+  pregnancy answer. Same third failure of the same kind as the three-item list and the em dash: a
+  rule written for one register, silently inherited by another.
+
+**`PROSE_RULES` is deliberately NOT imported here** - see the note in `agent.ts`. Still open: with the
+warm voice no longer sarcastic, the marketing-word list (journey, elevate, powerhouse, game-changer)
+is unguarded in chat. Promoting a few of those into `STYLE_RULES` would close it.
+
+The **main** routine's card carries a filled accent pill, **"Discuss with Snuffy"**, where the secondary
 cards show their quiet "Set as main" text link. It opens a modal chat with a grounded cosmetologist
 persona that discusses **only that routine**. (The "Main routine" badge was softened from a filled
 accent chip to an accent *tint* chip so the pill is the one filled element in the list.) The pill
@@ -438,6 +539,14 @@ The quiz's region options are about where a brand *comes from* — `goals.ts` sp
 American brands", "European pharmacy & heritage brands"). That distinction is easy to lose, and
 losing it makes the whole preference a no-op, since essentially every major brand is sold in every
 major market. Two places had lost it:
+
+**The region options carry no `meta` chips.** They used to: "Local" on US & Canada and "Pharmacy" on
+European. Both were wrong for a worldwide audience - "Local" is only true if you assume a North
+American reader, and "Pharmacy" quietly writes off the European brands sold in supermarkets, some of
+which are the best of them. All four chips were dropped (`OptionLevel.meta` is now optional and
+`GoalGrid` renders the chip only when present); the **commitment** levels keep theirs. The European
+`desc` went from "European pharmacy & heritage brands" to plain **"European brands"** - note `desc`
+is sent to the model as part of `label - desc`, so it still has to state ORIGIN.
 
 - **The prompt.** The model was sent only the bare label (`Region preference: US & Canada`), which
   reads as a *market*. Measured result: "Korean & Asian" stayed clean (unambiguous), but "US &
@@ -578,8 +687,14 @@ client path drives normally:
   the app just renders as signed out.
 - The user needs `uid`, `apiKey`, `appName: "[DEFAULT]"`, `providerData`, and a `stsTokenManager`
   with a **future `expirationTime`** — then `getIdToken()` returns the stub token without a network
-  round trip. Stub `**/identitytoolkit.googleapis.com/**` + `**/securetoken.googleapis.com/**` anyway
-  so a background refresh can't sign the fake user out.
+  round trip. Stub `**/identitytoolkit.googleapis.com/**` + `**/securetoken.googleapis.com/**` so a
+  background refresh can't sign the fake user out - but the identitytoolkit stub **must return a real
+  `getAccountInfo` body** (`{ users: [{ localId, email, providerUserInfo, ... }] }`). Fulfilling it
+  with `{}` makes Firebase treat the restored session as invalid and **DELETE the seeded record on
+  load**, which looks exactly like the seeding having failed.
+- `addInitScript` is the wrong place to seed: it cannot be awaited, so its IndexedDB write races
+  Firebase's own read. Load the origin first, seed with an **awaited** `page.evaluate` (resolve on
+  `tx.oncomplete`), then `reload()`.
 - Then `page.route("**/api/users**")` fulfils the save requests and lets you assert the method/body
   (POST without an id → PUT carrying the returned `quizId`). The **server** is stubbed out this way,
   so this proves the client contract only, not token verification or the Firestore writes.
@@ -837,8 +952,62 @@ client path drives normally:
     passed through, which is exactly what `ALLOWED_MODELS` is for. The default model and the routine
     chat are untouched: both still run `gemini-3.5-flash-lite`.
 
+29. **Snuffy gets a name, a face and two voices (this session):** the routine chat's assistant is now
+    **Snuffy the Cosmetologist** - a seal, a magical one, and a career cosmetologist. The card pill
+    reads **"Discuss with Snuffy"** and the window is headed **"Snuffy The Cosmetologist"**.
+    - **Two personalities, picked by the user at the start of a conversation** (Warm and encouraging /
+      Dry and direct), because the character had been described two different ways and both were
+      worth keeping. New `lib/ai/personas.ts` (whitelist + labels, zero imports so the prompt never
+      reaches the browser); `chat.ts` split into `SNUFFY_CORE` + `PERSONA_VOICES` + `SHARED_RULES`
+      behind `buildChatSystem(persona)`; `chatPersona` persisted on the routine doc, returned by
+      `GET`, resolved request -> stored -> default by `POST`, and cleared by `DELETE` so "Clear chat"
+      doubles as changing the voice. See the section above.
+    - **Two open questions from PR #6 were closed by the split:** the refusal register is now
+      respectful in *either* voice (declining is the worst moment to be clever at someone), and the
+      drop-the-act safety rule moved into the shared block so it cannot drift between personalities.
+    - **Fixed: the prompts banned a character they used.** `SAFETY_RULES`, `REGION_RULES`,
+      `RESEARCH_SYSTEM` and `MINIMAL_RULES` contained 13 em dashes inside the template literals sent
+      to the model, while `STYLE_RULES` in the same prompt says "NEVER an em dash". Normalised to
+      plain hyphens (comments left alone, matching the earlier pass). The composed chat prompt went
+      from 8 long dashes to 0.
+    - Verified: `tsc`/ESLint clean; `buildChatSystem` unit-tested across both ids (shared markers
+      present in both, no cross-leak, non-voice text byte-identical); full Playwright drive of the
+      signed-in UI with a stubbed `/api/routine-chat` - chooser renders light + dark, composer inert
+      until a voice is picked, `persona` on the POST body, Clear chat returns to the chooser, 0
+      console errors. **Not** exercised: a real grounded reply in either voice, so how the two
+      actually sound is still unmeasured.
+    - **Fixed after live testing: Snuffy closed every reply with a medical disclaimer.** The
+      instruction came from `SAFETY_RULES`, written for the one-shot routine document and inherited
+      by the chat. Split into `ROUTINE_DISCLAIMER_RULE` (routine prompts only), told the chat prompt
+      not to sign off that way, and added `stripTrailingDisclaimer()` as the deterministic backstop -
+      matching stock phrases only, so a real "see a dermatologist" is never stripped. 7/7 unit tests.
+    - **Fixed after live testing: Snuffy was too fenced in, and the region chips were wrong.** Scope
+      widened from "this saved routine" to "this client's skin and skincare", with stored preferences
+      demoted to defaults (a European-leaning routine no longer blocks a Korean product question) and
+      a chat-only rider on `REGION_RULES`. Genuinely unrelated questions are still declined. Separately,
+      the `Local` / `Pharmacy` region chips were removed (wrong for a worldwide audience) and the
+      European description simplified to "European brands". Verified by driving the quiz to both the
+      region and commitment steps: region tiles show no chips, commitment tiles keep theirs, 0 console
+      errors.
+    - **Fixed after live testing: every reply echoed the previous question.** Root cause was Firestore,
+      not the prompt - a batch gives both messages of a turn the same commit timestamp, so the
+      transcript came back with the turn reversed about half the time and the model saw an unanswered
+      older question. Added `lib/domain/chatOrder.ts` and sorted on read (which repairs conversations
+      already stored), and rebuilt the trim to delete by id from the ordered history. 6/6 unit tests.
+      **Note the server half is still untested end-to-end** - the comparator is unit-tested and the
+      route is type-checked, but no test exercises the real Firestore read.
+
 ## Likely next steps
 
+- **Measure how the two voices actually sound.** Everything about the personas is verified
+  structurally (prompt composition, UI, persistence); no test has read a real grounded reply in
+  either voice. Worth repeated runs per persona - especially the dry voice against "never at the
+  client's expense", and both against the drop-the-voice rule (pregnancy, anything medical, a client
+  upset about their skin). Per the region lesson, one clean run per voice proves nothing.
+- **The chat's marketing vocabulary is unguarded.** `PROSE_RULES` is not imported into the chat
+  prompt (it exists to fight voicelessness, which a character does not have), so "journey",
+  "elevate", "powerhouse" and "game-changer" are only blocked in the routine copy. Promoting two or
+  three of the worst into `STYLE_RULES` would close it without touching the split.
 - **Pick one model and remove the temporary `ModelPicker`** (the user plans to compare
   `3.5-flash-lite` vs `3.7-flash`, then keep one and delete the switch).
 - Add an explicit **account-creation prompt** after results (the pieces exist — auth + `SaveRoutine`

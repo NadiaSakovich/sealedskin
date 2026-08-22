@@ -45,7 +45,12 @@ export interface OptionLevel {
   id: string;
   label: string;
   desc: string;
-  meta: string;
+  /**
+   * Optional chip on the right of the tile ("Most popular"). The region options
+   * deliberately have none: a tag there has to be true of every brand in the
+   * region for a worldwide audience, and "Local"/"Pharmacy" were neither.
+   */
+  meta?: string;
   region?: RegionId;
 }
 

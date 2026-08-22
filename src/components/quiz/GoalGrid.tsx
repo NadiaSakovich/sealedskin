@@ -77,13 +77,15 @@ export function CommitmentPicker({
               <span className="block text-[16px] font-semibold tracking-[-0.01em]">{lvl.label}</span>
               <span className="block text-[13px] text-ss-ink-soft">{lvl.desc}</span>
             </span>
-            <span
-              className={`shrink-0 font-mono text-[10.5px] tracking-[0.04em] uppercase px-[9px] py-[5px] rounded-full whitespace-nowrap border ${
-                on ? "text-ss-accent-ink bg-ss-surface border-ss-hairline" : "text-ss-ink-faint bg-transparent border-transparent"
-              }`}
-            >
-              {lvl.meta}
-            </span>
+            {lvl.meta && (
+              <span
+                className={`shrink-0 font-mono text-[10.5px] tracking-[0.04em] uppercase px-[9px] py-[5px] rounded-full whitespace-nowrap border ${
+                  on ? "text-ss-accent-ink bg-ss-surface border-ss-hairline" : "text-ss-ink-faint bg-transparent border-transparent"
+                }`}
+              >
+                {lvl.meta}
+              </span>
+            )}
           </button>
         );
       })}

@@ -163,6 +163,14 @@ export interface RoutineChatRequest {
   /** Which saved routine to discuss. Must belong to the caller. */
   quizId: string;
   message: string;
+  /**
+   * Which voice Snuffy should answer in (`ChatPersonaId` in `lib/ai/personas`).
+   * Kept loose here so the persistence types stay free of the AI modules; the
+   * route validates it against the whitelist and falls back to the stored
+   * choice, then to the default. Omitted on a conversation that predates the
+   * chooser.
+   */
+  persona?: string;
 }
 
 /** The structured routine the AI agent produces from a user's answers. */

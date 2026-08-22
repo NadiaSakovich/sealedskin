@@ -74,14 +74,30 @@ const OUTPUT_SCHEMA = {
 // agent (`lib/ai/chat.ts`) discusses the SAME routine and must hold to the same
 // rules — a rule that lives in one prompt only is a rule the other path breaks.
 export const SAFETY_RULES = `Safety rules:
-- The user's skin type and sensitivity are already determined — respect them.
+- The user's skin type and sensitivity are already determined - respect them.
 - ALWAYS include sunscreen in the morning and a hydrator somewhere.
 - If the user is pregnant, planning, or breastfeeding, EXCLUDE retinoids and \
 other actives best avoided then, and note it.
 - Introduce actives (retinoids, exfoliating acids, vitamin C) cautiously; note \
 frequency and conflicts (don't combine a retinoid and an acid the same night).
-- Brands are EXAMPLES of the right kind of product, never endorsements. Include a \
-brief note that this is general guidance and no substitute for a dermatologist.`;
+- Brands are EXAMPLES of the right kind of product, never endorsements.`;
+
+/**
+ * The "this is not medical advice" note.
+ *
+ * Split out of `SAFETY_RULES` because it is a rule about a DOCUMENT, not about
+ * safety: a routine is written once and carries the note once, at the bottom.
+ * Shared with the chat prompt it meant "say this every time you speak", and
+ * Snuffy duly closed every single reply with it - which reads as a legal reflex
+ * rather than as care, and is redundant besides, since the chat window already
+ * shows a standing version of it under the message box.
+ *
+ * Same failure as the three-item-list rule that `PROSE_RULES` was split off to
+ * fix: a rule written for one register, quietly inherited by another where it
+ * means something different.
+ */
+export const ROUTINE_DISCLAIMER_RULE = `- Close with a brief note that this is \
+general guidance and no substitute for a dermatologist.`;
 
 /**
  * The price ceiling on suggested products. Our users are building a first
@@ -149,7 +165,7 @@ game-changer, "think of it as", "it's not just".`;
 /**
  * How to read the "Region preference" answer. The user is choosing where the
  * BRAND comes from — the quiz options say so ("North American brands",
- * "European pharmacy & heritage brands") — but the label alone is easy to read
+ * "European brands") — but the label alone is easy to read
  * as a market instead, and since essentially every major brand is sold in every
  * major market, that reading makes the preference a no-op. It's how La
  * Roche-Posay (French) and COSRX (Korean) ended up in "US & Canada" routines.
@@ -157,8 +173,8 @@ game-changer, "think of it as", "it's not just".`;
  * option exists" escape hatch is replaced by "say so" — the shop UI already
  * renders a step with no picks rather than hiding it.
  */
-export const REGION_RULES = `Regional preference — apply this literally:
-The user's region preference is about where the BRAND ITSELF originates — the \
+export const REGION_RULES = `Regional preference - apply this literally:
+The user's region preference is about where the BRAND ITSELF originates - the \
 country the brand was founded in and is identified with. It is NOT about where a \
 product can be bought. Almost every well-known brand is sold worldwide, so \
 availability is never the test.
@@ -166,16 +182,16 @@ availability is never the test.
 Beauty of Joseon, Hada Labo, Anua, Round Lab).
 - "US & Canada" means brands founded in the United States or Canada (CeraVe, \
 Cetaphil, Vanicream, Neutrogena, Paula's Choice, The Ordinary, e.l.f.). European \
-houses — La Roche-Posay, Vichy, Bioderma, Avene, Eucerin, Garnier — do NOT count, \
+houses - La Roche-Posay, Vichy, Bioderma, Avene, Eucerin, Garnier - do NOT count, \
 even though they are sold everywhere in North America. Korean brands such as \
 COSRX, Heimish or Beauty of Joseon do NOT count either.
 - "European" means brands founded in Europe (La Roche-Posay, Bioderma, Avene, \
-Vichy, Eucerin, The INKEY List, Medik8). North American brands — CeraVe, \
-Cetaphil, The Ordinary (Canadian), Paula's Choice — do NOT count.
+Vichy, Eucerin, The INKEY List, Medik8). North American brands - CeraVe, \
+Cetaphil, The Ordinary (Canadian), Paula's Choice - do NOT count.
 - "No preference" means any origin; give a deliberate spread across regions.
 Every single product you list must pass this test. Check each brand's country of \
 origin before listing it. If you genuinely cannot find a suitable in-region brand \
-for a step, list fewer products for that step and say why — do NOT quietly \
+for a step, list fewer products for that step and say why - do NOT quietly \
 substitute an out-of-region brand.`;
 
 // STEP 1 — grounded research. We deliberately ask for PROSE (not JSON): Gemini's
@@ -193,10 +209,10 @@ Write a thorough brief in PLAIN PROSE (do NOT use JSON or code blocks). Cover:
 2. An ordered AM and PM routine (cleanser -> treatments -> moisturizer -> SPF in \
 the morning), sized to the user's commitment level (minimal = essentials only; \
 balanced = one targeted serum; thorough = layered), with a short note per step. \
-If a double cleanse suits the PM routine, write it as TWO separate steps — an \
-oil/balm cleanser, then a water-based cleanser — never a single "double cleanse" \
+If a double cleanse suits the PM routine, write it as TWO separate steps - an \
+oil/balm cleanser, then a water-based cleanser - never a single "double cleanse" \
 step, so each can have its own products.
-3. For each routine step, give EXACTLY THREE current example products — ideally \
+3. For each routine step, give EXACTLY THREE current example products - ideally \
 one Budget, one Mid, and one Premium; if you can't find three distinct price \
 tiers, still give three options (repeating a tier is fine). Each needs a brand, \
 product name, an approximate price, and a tier (Budget/Mid/Premium).
@@ -206,6 +222,7 @@ ${PRICE_RULES}
 ${REGION_RULES}
 
 ${SAFETY_RULES}
+${ROUTINE_DISCLAIMER_RULE}
 
 ${STYLE_RULES}
 
@@ -226,6 +243,7 @@ brief's safety guidance in the routine notes. Output ONLY data matching the \
 provided schema.
 
 ${SAFETY_RULES}
+${ROUTINE_DISCLAIMER_RULE}
 
 ${STYLE_RULES}
 
@@ -241,17 +259,17 @@ ${PROSE_RULES}`;
  */
 const MINIMAL_RULES = `
 
-Minimal routine — the user asked to keep it minimal. These rules OVERRIDE the \
+Minimal routine - the user asked to keep it minimal. These rules OVERRIDE the \
 general guidance above:
 - The morning routine must have AT MOST 3 steps, and the evening routine AT MOST \
 3 steps. Fewer is fine; do not pad them to reach 3.
 - The LAST morning step must ALWAYS be a MOISTURISING SUNSCREEN: one product that \
 moisturises AND gives broad-spectrum SPF 30-50. Do NOT emit a separate moisturiser \
-step and a separate sunscreen step in the morning — for this user they are a single \
+step and a separate sunscreen step in the morning - for this user they are a single \
 step. Name that step exactly "Moisturising sunscreen".
 - Every product suggested for that step must genuinely be a hydrating/moisturising \
 SPF (an SPF fluid, lotion or moisturiser with SPF), not a bare sunscreen.
-- Keep the evening to a SINGLE cleanse — no double cleanse — so it fits in 3 steps.`;
+- Keep the evening to a SINGLE cleanse - no double cleanse - so it fits in 3 steps.`;
 
 /** Did the user pick the "minimal" commitment level? (See COMMITMENT_LEVELS.) */
 function wantsMinimal(answers: QuizAnswer[]): boolean {

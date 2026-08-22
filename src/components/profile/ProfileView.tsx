@@ -85,7 +85,7 @@ export function ProfileView() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingMainId, setSettingMainId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  /** Id of the routine whose "Discuss with AI" window is open, if any. */
+  /** Id of the routine whose "Discuss with Snuffy" window is open, if any. */
   const [chatId, setChatId] = useState<string | null>(null);
 
   // Await before the first setState so this is safe to call straight from an
@@ -381,7 +381,7 @@ export function ProfileView() {
                 </div>
                 <div className="flex items-center justify-between gap-2 px-[18px] py-[9px] border-t border-ss-hairline">
                   {q.isMain ? (
-                    // `h-[22px]` is shared with the "Discuss with AI" pill opposite
+                    // `h-[22px]` is shared with the "Discuss with Snuffy" pill opposite
                     // it, so the two sit on one line and the main card's footer is
                     // the same height as the secondary cards'.
                     <span className="inline-flex items-center gap-[6px] h-[22px] font-mono text-[10.5px] tracking-[0.08em] uppercase text-ss-accent-ink bg-ss-accent-tint px-[9px] rounded-full">
@@ -411,7 +411,7 @@ export function ProfileView() {
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.1a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 8.9 7.4z" />
                       </svg>
-                      Discuss with AI
+                      Discuss with Snuffy
                     </button>
                   ) : (
                     <button

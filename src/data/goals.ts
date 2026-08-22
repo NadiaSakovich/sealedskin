@@ -21,9 +21,19 @@ export const COMMITMENT_LEVELS: OptionLevel[] = [
   { id: "thorough", label: "Go thorough", desc: "6+ steps. I enjoy the whole thing", meta: "The full ritual" },
 ];
 
+/**
+ * Where the BRAND comes from - see `REGION_RULES` in `lib/ai/agent.ts`, which
+ * reads `desc` as well as `label` so the model cannot mistake origin for
+ * availability.
+ *
+ * No `meta` chips here, unlike the commitment levels. A tag on a region has to
+ * hold for every brand in it and for every reader: "Local" is only true if you
+ * assume a North American audience, and "Pharmacy" would quietly write off the
+ * European brands sold in supermarkets, which include some of the best of them.
+ */
 export const REGIONS: OptionLevel[] = [
-  { id: "asia", label: "Korean & Asian", desc: "K-beauty, J-beauty and Asian brands", meta: "K-beauty", region: "asia" },
-  { id: "us", label: "US & Canada", desc: "North American brands", meta: "Local", region: "us" },
-  { id: "eu", label: "European", desc: "European pharmacy & heritage brands", meta: "Pharmacy", region: "eu" },
-  { id: "none", label: "No preference", desc: "Show me the best mix from everywhere", meta: "Best mix", region: "none" },
+  { id: "asia", label: "Korean & Asian", desc: "K-beauty, J-beauty and Asian brands", region: "asia" },
+  { id: "us", label: "US & Canada", desc: "North American brands", region: "us" },
+  { id: "eu", label: "European", desc: "European brands", region: "eu" },
+  { id: "none", label: "No preference", desc: "Show me the best mix from everywhere", region: "none" },
 ];
