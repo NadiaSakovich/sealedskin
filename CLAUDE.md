@@ -598,9 +598,11 @@ pre-fix) picks until rebuilt.
 The chat window's header shows Snuffy himself (`public/snuffy/snuffy-avatar.png`, 192px PNG with
 alpha, rendered by `next/image` at **48px**), not the generic speech-bubble SVG it replaced.
 
-- **Sits in a 48px circular plate**, with the artwork **inset to 40px** - at full bleed the art
-  fills the disc edge to edge and the plate is only ever a hairline, so the circle stops reading as
-  a circle. `alt=""` - it is decorative, the heading beside it names him.
+- **Sits in a 48px circular plate, full-bleed and bottom-aligned** - Snuffy is cropped BY the disc
+  like a portrait by a round frame, not floating inside it. Two things are load-bearing here: the
+  wrapper is `items-end`, and the PNG is exported **tight-cropped**. The draft PNGs carry a 6%
+  breathing margin from `key.py`, which at 48px reads as a gap between his body and the bottom of
+  the circle. Re-export tight if you swap variants. `alt=""` - decorative, the heading names him.
 - **The plate has its own token, `--color-ss-avatar-plate`**, and it is the one place the dark value
   is deliberately *lighter* than its surface rather than darker (`#51675c` on `#1c2723`). Reusing
   `ss-accent-tint` does not work: that inverts to `#21301a` and the disc disappears into the header

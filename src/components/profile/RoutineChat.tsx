@@ -287,17 +287,19 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
             because it cannot simply follow the accent tint: that inverts to a
             near-black in dark mode and the disc disappears into the header.
           */}
-          <span className="shrink-0 mt-[2px] w-12 h-12 rounded-full bg-ss-avatar-plate overflow-hidden inline-flex items-center justify-center">
-            {/* Inset, or the artwork fills the disc edge to edge and the plate
-                is only ever a hairline - the circle has to be visible to be
-                worth having. */}
+          <span className="shrink-0 mt-[2px] w-12 h-12 rounded-full bg-ss-avatar-plate overflow-hidden inline-flex items-end justify-center">
+            {/* Bottom-aligned and full-bleed: Snuffy sits IN the disc like a
+                portrait cropped by its frame, rather than floating clear of the
+                bottom. The PNG is tight-cropped for the same reason - the
+                draft's 6% breathing margin reads as a gap at this size. The
+                plate still shows, in the corners the dome leaves transparent. */}
             <Image
               src="/snuffy/snuffy-avatar.png"
               alt=""
-              width={40}
-              height={40}
+              width={48}
+              height={48}
               priority
-              className="w-10 h-10"
+              className="w-12 h-12"
             />
           </span>
           <div className="flex-1 min-w-0">
