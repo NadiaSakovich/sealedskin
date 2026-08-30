@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Notes for myself
 notes.txt
+# Chroma-key originals behind the Snuffy avatar drafts. The keyed 512px PNGs in
+# design-drafts/ are committed and are enough to re-export any smaller size.
+/design-drafts/*/raw/

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snuffy avatar options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600&family=Hanken+Grotesk:wght@400;500&family=Spline+Sans+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e8f0ed; --panel:#f6faf8; --surface:#fbfdfc; --ink:#243f39; --ink-soft:#5a716b;
+    --ink-faint:#95a8a2; --hairline:#dbe7e2; --accent:#7a9e54; --accent-tint:#eaf1e6; --accent-ink:#5c7b47;
+    --d-panel:#161f1b; --d-surface:#1c2723; --d-ink:#e4ece8; --d-ink-soft:#a3b5af;
+    --d-hairline:#2a3833; --d-accent-tint:#21301a; --d-accent-ink:#a9c987;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;padding:32px 20px 80px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:26px;letter-spacing:-.01em;margin:0 0 6px}
+  .lede{color:var(--ink-soft);font-size:14.5px;line-height:1.6;margin:0 0 6px;max-width:70ch}
+  .eyebrow{font-family:"Spline Sans Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  .opt{background:var(--panel);border:1px solid var(--hairline);border-radius:18px;padding:20px;margin:22px 0}
+  .opt > header{display:flex;align-items:baseline;gap:10px;margin-bottom:16px}
+  .opt h2{font-family:"Schibsted Grotesk",sans-serif;font-size:17px;margin:0}
+  .id{font-family:"Spline Sans Mono",monospace;font-size:11px;color:var(--ink-faint)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+
+  /* Faithful replica of the RoutineChat header band. */
+  .hdr{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border:1px solid var(--hairline);border-radius:14px;background:var(--surface)}
+  .hdr.dark{background:var(--d-surface);border-color:var(--d-hairline)}
+  .hdr .t{font-family:"Schibsted Grotesk",sans-serif;font-weight:600;font-size:16px;line-height:1.2;letter-spacing:-.01em;margin:0;color:var(--ink)}
+  .hdr .s{font-size:12.5px;line-height:1.4;margin:2px 0 0;color:var(--ink-soft)}
+  .hdr .s b{color:var(--accent-ink);font-weight:400}
+  .hdr.dark .t{color:var(--d-ink)} .hdr.dark .s{color:var(--d-ink-soft)} .hdr.dark .s b{color:var(--d-accent-ink)}
+  .hdr .x{margin-left:auto;color:var(--ink-faint);font-size:17px;line-height:1}
+  .av{flex:0 0 auto;display:block}
+  .av.circle{border-radius:50%;background:var(--accent-tint)}
+  .hdr.dark .av.circle{background:var(--d-accent-tint)}
+
+  .sizes{display:flex;align-items:flex-end;gap:18px;padding:14px 18px;border:1px solid var(--hairline);border-radius:14px;background:var(--surface)}
+  .sizes.dark{background:var(--d-surface);border-color:var(--d-hairline)}
+  .sizes figure{margin:0;text-align:center}
+  .sizes figcaption{font-family:"Spline Sans Mono",monospace;font-size:9.5px;color:var(--ink-faint);margin-top:6px}
+  .big{width:150px;height:150px}
+  .note{font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin:12px 0 0}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">SealedSkin · design draft</p>
+  <h1>Snuffy avatar options</h1>
+  <p class="lede">Snuffy in a clinician's coat with UNIFORM fur, five tones, plus the earlier options you kept, each shown in a faithful replica of the
+    real header band - light and dark - and at the sizes it would actually render. The current icon is a
+    36px speech bubble in a tinted circle; these are drawn at <strong>48px</strong>, bigger as you asked.</p>
+  <p class="lede">Every option is a transparent PNG, so the left column shows it bare on the surface and
+    the right column shows it sitting in the existing tinted circle. Pick a <em>character</em> and a
+    <em>treatment</em> - they are independent.</p>
+  <p class="lede">13-17 fix the banded fur: one single tone over head, face, muzzle and shoulders, with
+    no dark cap and no pale chest - the two-tone split was what made the earlier ones read as a penguin.
+    They differ only in <em>which</em> tone, so the choice is purely how much contrast Snuffy carries
+    against the coat and against each page theme. 17 inverts it - pale fur, sage coat.</p>
+  <div class="legend"><span>◻︎ bare on surface</span><span>◯ in the accent-tint circle</span><span>All art 512×512 PNG with alpha</span></div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+const OPTIONS = [
+  ["02-line-art",      "Fine line art",       "IMPLEMENTED - this is the one now in the chat header."],
+  ["03-soft-gouache",  "Soft gouache · scarf", "Kept as an alternative."],
+  ["16-fur-mid-olive", "Mid olive fur · coat", "Kept as an alternative."],
+];
+const S = [36, 48, 56, 72];
+document.getElementById("out").innerHTML = OPTIONS.map(([id, name, note]) => `
+  <section class="opt">
+    <header><h2>${name}</h2><span class="id">${id}.png</span></header>
+    <div class="grid">
+      ${[["", "light"], ["circle", "light"], ["", "dark"], ["circle", "dark"]].map(([shape, theme]) => `
+        <div class="hdr ${theme === "dark" ? "dark" : ""}">
+          <img class="av ${shape}" src="${id}.png" width="48" height="48" alt="">
+          <div><p class="t">Snuffy The Cosmetologist</p><p class="s">Combination skin <b>· Balanced</b></p></div>
+          <span class="x">✕</span>
+        </div>`).join("")}
+    </div>
+    <div class="grid" style="margin-top:14px">
+      ${["light", "dark"].map(theme => `
+        <div class="sizes ${theme === "dark" ? "dark" : ""}">
+          ${S.map(s => `<figure><img src="${id}.png" width="${s}" height="${s}" alt=""><figcaption>${s}px</figcaption></figure>`).join("")}
+          <figure style="margin-left:auto"><img class="big" src="${id}.png" alt=""></figure>
+        </div>`).join("")}
+    </div>
+    <p class="note">${note}</p>
+  </section>`).join("");
+</script>
+</body>
+</html>

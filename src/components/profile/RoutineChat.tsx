@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentIdToken } from "../../lib/firebase/client";
 import { anonHeaders } from "../../lib/anonId";
@@ -280,11 +281,21 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
       >
         {/* Header */}
         <div className="shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
-          <span className="shrink-0 mt-[2px] w-9 h-9 rounded-full bg-ss-accent-tint text-ss-accent-ink inline-flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.1a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 8.9 7.4z" />
-            </svg>
-          </span>
+          {/*
+            Snuffy himself, rather than a generic speech bubble. Drawn on
+            transparency and shown bare (no tinted disc): the illustration is
+            pale-bodied with pine outlines, so it holds up on both the light and
+            the dark surface without a plate behind it, and a disc would clip
+            his shoulders. Decorative - the heading beside it already names him.
+          */}
+          <Image
+            src="/snuffy/snuffy-avatar.png"
+            alt=""
+            width={48}
+            height={48}
+            priority
+            className="shrink-0 w-12 h-12"
+          />
           <div className="flex-1 min-w-0">
             <h2 className="font-head font-semibold text-[16px] leading-[1.2] tracking-[-0.01em] text-ss-ink m-0">
               Snuffy The Cosmetologist
