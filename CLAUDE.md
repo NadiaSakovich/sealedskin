@@ -598,10 +598,14 @@ pre-fix) picks until rebuilt.
 The chat window's header shows Snuffy himself (`public/snuffy/snuffy-avatar.png`, 192px PNG with
 alpha, rendered by `next/image` at **48px**), not the generic speech-bubble SVG it replaced.
 
-- **Shown bare, with no tinted disc behind it.** The illustration is pale-bodied with deep pine
-  outlines, so it holds on the light surface *and* the dark one unaided; a disc would also clip the
-  shoulders of any variant wearing a coat. `alt=""` - it is decorative, the heading beside it names
-  him.
+- **Sits in a 48px circular plate**, with the artwork **inset to 40px** - at full bleed the art
+  fills the disc edge to edge and the plate is only ever a hairline, so the circle stops reading as
+  a circle. `alt=""` - it is decorative, the heading beside it names him.
+- **The plate has its own token, `--color-ss-avatar-plate`**, and it is the one place the dark value
+  is deliberately *lighter* than its surface rather than darker (`#51675c` on `#1c2723`). Reusing
+  `ss-accent-tint` does not work: that inverts to `#21301a` and the disc disappears into the header
+  band. Measured against the alternatives - the sage accent `#7a9e54` reads as a loud green blob and
+  competes with the accent text next to it, and a pale plate washes out Snuffy's own pale body.
 - **Drafts live in `design-drafts/snuffy-avatar/`** with a `preview.html` that shows each option
   inside a replica of the real header, light and dark, at 36/48/56/72px. Three characters are kept:
   `02-line-art` (**the one implemented**), `03-soft-gouache` (scarf) and `16-fur-mid-olive`

@@ -282,20 +282,24 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         {/* Header */}
         <div className="shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
           {/*
-            Snuffy himself, rather than a generic speech bubble. Drawn on
-            transparency and shown bare (no tinted disc): the illustration is
-            pale-bodied with pine outlines, so it holds up on both the light and
-            the dark surface without a plate behind it, and a disc would clip
-            his shoulders. Decorative - the heading beside it already names him.
+            Snuffy himself, rather than a generic speech bubble. Decorative - the
+            heading beside it already names him. The plate is its own token
+            because it cannot simply follow the accent tint: that inverts to a
+            near-black in dark mode and the disc disappears into the header.
           */}
-          <Image
-            src="/snuffy/snuffy-avatar.png"
-            alt=""
-            width={48}
-            height={48}
-            priority
-            className="shrink-0 w-12 h-12"
-          />
+          <span className="shrink-0 mt-[2px] w-12 h-12 rounded-full bg-ss-avatar-plate overflow-hidden inline-flex items-center justify-center">
+            {/* Inset, or the artwork fills the disc edge to edge and the plate
+                is only ever a hairline - the circle has to be visible to be
+                worth having. */}
+            <Image
+              src="/snuffy/snuffy-avatar.png"
+              alt=""
+              width={40}
+              height={40}
+              priority
+              className="w-10 h-10"
+            />
+          </span>
           <div className="flex-1 min-w-0">
             <h2 className="font-head font-semibold text-[16px] leading-[1.2] tracking-[-0.01em] text-ss-ink m-0">
               Snuffy The Cosmetologist

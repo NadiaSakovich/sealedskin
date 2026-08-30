@@ -18,6 +18,10 @@
   --color-ss-accent: #7a9e54;
   --color-ss-accent-tint: #eaf1e6;
   --color-ss-accent-ink: #5c7b47;
+  /* Plate behind Snuffy's avatar. Its own token because the disc has to
+     stay LIGHTER than the header surface in dark mode, which the accent
+     tint does not - that inverts to #21301a and vanishes into #1c2723. */
+  --color-ss-avatar-plate: #eaf1e6;
   --color-caution-text: #a86b3c;
   --color-caution-bg: #f6ecdf;
 
@@ -45,6 +49,11 @@
   --color-ss-accent: #8fb468;
   --color-ss-accent-tint: #21301a;
   --color-ss-accent-ink: #a9c987;
+  /* Deliberately LIGHTER than the dark surface (#1c2723) rather than darker,
+     so the disc separates from the header band. Muted grey-green: the sage
+     accent reads as a loud blob here and competes with the accent text, and
+     a pale plate washes out Snuffy's own pale body. */
+  --color-ss-avatar-plate: #51675c;
   --color-caution-text: #d7a368;
   --color-caution-bg: #2e2417;
 
