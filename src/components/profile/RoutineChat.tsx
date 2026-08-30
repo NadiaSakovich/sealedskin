@@ -174,7 +174,14 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
     void loadHistory();
   }, [loadHistory]);
 
+  // Focus the composer on open - but never on a touch device. iOS Safari zooms
+  // the page in whenever a field is focused (and only zooms back out if the user
+  // does it by hand), which leaves the whole site wider than the screen and
+  // scrolling sideways. Sizing the composer at 16px is what actually stops
+  // the zoom; not stealing focus means the keyboard doesn't cover the
+  // conversation before the client has read a word of it either.
   useEffect(() => {
+    if (window.matchMedia?.("(pointer: coarse)").matches) return;
     inputRef.current?.focus();
   }, []);
 
@@ -269,7 +276,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={`Discuss your ${title} routine with Snuffy the Cosmetologist`}
-        className="relative w-full sm:max-w-[560px] h-[88vh] sm:h-[min(660px,86vh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
+        className="relative w-full sm:max-w-[560px] h-[88dvh] sm:h-[min(660px,86dvh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
       >
         {/* Header */}
         <div className="shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
@@ -413,7 +420,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
               rows={1}
               placeholder={choosing ? "Pick how Snuffy should talk first..." : "Ask about your routine..."}
               disabled={sending || choosing}
-              className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
+              className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[16px] sm:text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
             />
             <button
               type="button"
