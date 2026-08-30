@@ -94,7 +94,7 @@ function ReplyBody({ text }: { text: string }) {
 
 function TypingDots() {
   return (
-    <span className="inline-flex items-center gap-[5px] py-1" aria-label="Thinking">
+    <span className="inline-flex items-center gap-[5px] py-1" aria-hidden="true">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -391,9 +391,13 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
           )}
 
           {sending && (
-            <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-ss-surface border border-ss-hairline px-[14px] py-[11px]">
+            <div
+              role="status"
+              aria-live="polite"
+              className="max-w-[92%] rounded-2xl rounded-bl-md bg-ss-surface border border-ss-hairline px-[14px] py-[11px]"
+            >
               <TypingDots />
-              <p className="text-[12px] text-ss-ink-faint m-0 mt-1">Checking current reviews…</p>
+              <p className="text-[12px] text-ss-ink-faint m-0 mt-1">Thinking…</p>
             </div>
           )}
 
