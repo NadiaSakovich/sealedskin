@@ -676,6 +676,15 @@ Both bite anything generated with `gemini-3-pro-image`, not just this avatar:
   `rm -rf .next/cache/images`. Fix that actually works: full `rm -rf .next` + restart. (Production
   builds optimize fresh, so this is dev-only. Verify with `curl -H "Accept: image/webp" <_next/image url>`.)
 - Don't run `next build` while `next dev` is running (shared `.next` → conflicts).
+- **Any focused text input under 16px zooms the WHOLE SITE on iOS.** Safari zooms in on focus
+  and never zooms back out on its own, so the layout viewport stays put while the visual one
+  shrinks — it reads to the user as "the site is the wrong width and scrolls sideways", and it
+  persists after the field is closed. Size text inputs `text-[16px] sm:text-[14px]` (desktop
+  can't auto-zoom, so it keeps the smaller type), and don't autofocus on a coarse pointer —
+  on a phone that only throws the keyboard over the content anyway. This is invisible in
+  Chrome, including its device emulation: it is native Safari behaviour, so it can only be
+  confirmed on a real device. It cost us the Snuffy chat's whole width on iPhone (`c328bb5`);
+  that textarea is currently the app's ONLY text input, which is why nothing else showed it.
 - Buttons go through `ui/Button.tsx` (`variant="primary" | "ghost"`); the primary CTA has the
   `bg-ss-accent` class (handy selector for E2E driving).
 - Preserve the safety logic in `actives.ts`: SPF + a hydrator are always included; actives
