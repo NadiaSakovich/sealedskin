@@ -1,0 +1,23 @@
+[
+  {
+    "file": "02-line-art.png",
+    "kb": 223,
+    "transparentPct": 35.2,
+    "id": "02-line-art",
+    "label": "Fine line art"
+  },
+  {
+    "file": "03-soft-gouache.png",
+    "kb": 255,
+    "transparentPct": 55.4,
+    "id": "03-soft-gouache",
+    "label": "Soft gouache"
+  },
+  {
+    "file": "16-fur-mid-olive.png",
+    "kb": 235,
+    "transparentPct": 42.6,
+    "id": "16-fur-mid-olive",
+    "label": "Uniform mid olive fur"
+  }
+]

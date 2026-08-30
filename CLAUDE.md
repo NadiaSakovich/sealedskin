@@ -593,6 +593,46 @@ does NOT exercise this. Test it through `buildAiResult` or the UI.
 (`productsByType` from its snapshot), not re-fetched — so an old save keeps its original (possibly
 pre-fix) picks until rebuilt.
 
+## Snuffy's avatar
+
+The chat window's header shows Snuffy himself (`public/snuffy/snuffy-avatar.png`, 192px PNG with
+alpha, rendered by `next/image` at **48px**), not the generic speech-bubble SVG it replaced.
+
+- **Sits in a 48px circular plate, full-bleed and bottom-aligned** - Snuffy is cropped BY the disc
+  like a portrait by a round frame, not floating inside it. Two things are load-bearing here: the
+  wrapper is `items-end`, and the PNG is exported **tight-cropped**. The draft PNGs carry a 6%
+  breathing margin from `key.py`, which at 48px reads as a gap between his body and the bottom of
+  the circle. Re-export tight if you swap variants. `alt=""` - decorative, the heading names him.
+- **The plate has its own token, `--color-ss-avatar-plate`**, and it is the one place the dark value
+  is deliberately *lighter* than its surface rather than darker (`#51675c` on `#1c2723`). Reusing
+  `ss-accent-tint` does not work: that inverts to `#21301a` and the disc disappears into the header
+  band. Measured against the alternatives - the sage accent `#7a9e54` reads as a loud green blob and
+  competes with the accent text next to it, and a pale plate washes out Snuffy's own pale body.
+- **Drafts live in `design-drafts/snuffy-avatar/`** with a `preview.html` that shows each option
+  inside a replica of the real header, light and dark, at 36/48/56/72px. Three characters are kept:
+  `02-line-art` (**the one implemented**), `03-soft-gouache` (scarf) and `16-fur-mid-olive`
+  (clinician's coat). Swapping is a re-export of the 512px draft plus a file replace - but mind the
+  image-optimizer stale-variant gotcha below: overwriting a file in `public/` needs a full
+  `rm -rf .next`.
+
+### Generating these (two gotchas that cost real time)
+
+Both bite anything generated with `gemini-3-pro-image`, not just this avatar:
+
+- **Asking for "a transparent background" makes the model PAINT A CHECKERBOARD** - a literal grey and
+  white grid baked into an opaque JPEG. It never returns alpha. Generate on a flat magenta `#FF00FF`
+  chroma key instead and punch it out afterwards (soft alpha ramp over the key range so anti-aliased
+  edges stay smooth, plus a de-fringe pass pulling green up to `min(r,b)` on partly transparent
+  pixels, or every edge keeps a pink halo).
+- **The model silently ignores the chroma key perhaps a third of the time** and paints a near-white
+  background instead (~`(250,250,245)`). That is within ~10 RGB of an off-white lab coat, so keying
+  it out eats the garment. **Verify, do not trust:** sample all four corners and regenerate until
+  they are genuinely magenta - one variant needed three attempts. Putting the key instruction
+  *first* in the prompt helps; burying it at the end is what caused the misses.
+- A variant may also draw a panel or frame behind the subject, which survives the key as a
+  rectangle. A corner flood-fill removes an unstroked one; a stroked one needs a regeneration with
+  explicit anti-frame wording.
+
 ## Quiz imagery
 
 - `ui/PhotoSlot.tsx` renders a real image (`next/image`, `fill` + `object-cover`) when given a

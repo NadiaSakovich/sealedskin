@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentIdToken } from "../../lib/firebase/client";
 import { anonHeaders } from "../../lib/anonId";
@@ -94,7 +95,7 @@ function ReplyBody({ text }: { text: string }) {
 
 function TypingDots() {
   return (
-    <span className="inline-flex items-center gap-[5px] py-1" aria-label="Thinking">
+    <span className="inline-flex items-center gap-[5px] py-1" aria-hidden="true">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -174,7 +175,14 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
     void loadHistory();
   }, [loadHistory]);
 
+  // Focus the composer on open - but never on a touch device. iOS Safari zooms
+  // the page in whenever a field is focused (and only zooms back out if the user
+  // does it by hand), which leaves the whole site wider than the screen and
+  // scrolling sideways. Sizing the composer at 16px is what actually stops
+  // the zoom; not stealing focus means the keyboard doesn't cover the
+  // conversation before the client has read a word of it either.
   useEffect(() => {
+    if (window.matchMedia?.("(pointer: coarse)").matches) return;
     inputRef.current?.focus();
   }, []);
 
@@ -269,14 +277,30 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={`Discuss your ${title} routine with Snuffy the Cosmetologist`}
-        className="relative w-full sm:max-w-[560px] h-[88vh] sm:h-[min(660px,86vh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
+        className="relative w-full sm:max-w-[560px] h-[88dvh] sm:h-[min(660px,86dvh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
       >
         {/* Header */}
         <div className="shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
-          <span className="shrink-0 mt-[2px] w-9 h-9 rounded-full bg-ss-accent-tint text-ss-accent-ink inline-flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.1a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 8.9 7.4z" />
-            </svg>
+          {/*
+            Snuffy himself, rather than a generic speech bubble. Decorative - the
+            heading beside it already names him. The plate is its own token
+            because it cannot simply follow the accent tint: that inverts to a
+            near-black in dark mode and the disc disappears into the header.
+          */}
+          <span className="shrink-0 mt-[2px] w-12 h-12 rounded-full bg-ss-avatar-plate overflow-hidden inline-flex items-end justify-center">
+            {/* Bottom-aligned and full-bleed: Snuffy sits IN the disc like a
+                portrait cropped by its frame, rather than floating clear of the
+                bottom. The PNG is tight-cropped for the same reason - the
+                draft's 6% breathing margin reads as a gap at this size. The
+                plate still shows, in the corners the dome leaves transparent. */}
+            <Image
+              src="/snuffy/snuffy-avatar.png"
+              alt=""
+              width={48}
+              height={48}
+              priority
+              className="w-12 h-12"
+            />
           </span>
           <div className="flex-1 min-w-0">
             <h2 className="font-head font-semibold text-[16px] leading-[1.2] tracking-[-0.01em] text-ss-ink m-0">
@@ -384,9 +408,13 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
           )}
 
           {sending && (
-            <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-ss-surface border border-ss-hairline px-[14px] py-[11px]">
+            <div
+              role="status"
+              aria-live="polite"
+              className="max-w-[92%] rounded-2xl rounded-bl-md bg-ss-surface border border-ss-hairline px-[14px] py-[11px]"
+            >
               <TypingDots />
-              <p className="text-[12px] text-ss-ink-faint m-0 mt-1">Checking current reviews…</p>
+              <p className="text-[12px] text-ss-ink-faint m-0 mt-1">Thinking…</p>
             </div>
           )}
 
@@ -413,7 +441,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
               rows={1}
               placeholder={choosing ? "Pick how Snuffy should talk first..." : "Ask about your routine..."}
               disabled={sending || choosing}
-              className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
+              className="flex-1 min-w-0 resize-none max-h-[120px] rounded-2xl border border-ss-hairline-strong bg-ss-panel px-[14px] py-[10px] font-body text-[16px] sm:text-[14px] leading-[1.5] text-ss-ink placeholder:text-ss-ink-faint focus:outline-none focus:border-ss-accent disabled:opacity-60"
             />
             <button
               type="button"
