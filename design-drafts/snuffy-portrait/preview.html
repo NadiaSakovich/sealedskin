@@ -1,0 +1,111 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Snuffy portrait - options</title>
+<style>
+  :root {
+    --bg: #e8f0ed; --surface: #fbfdfc; --ink: #243f39; --ink-soft: #5a716b;
+    --hairline: #dbe7e2; --accent: #7a9e54; --accent-tint: #eaf1e6;
+  }
+  .dark {
+    --bg: #0e1613; --surface: #1c2723; --ink: #e4ece8; --ink-soft: #a3b5af;
+    --hairline: #2a3833; --accent: #8fb468; --accent-tint: #21301a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.6 -apple-system, system-ui, sans-serif; background: #fff; color: #243f39; }
+  .band { background: var(--bg); color: var(--ink); padding: 40px 32px 48px; }
+  h1 { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--ink-soft); margin: 0 0 28px; }
+  h2 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin: 40px 0 14px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .opt { width: 240px; }
+  .opt .plate { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; }
+  .opt img { display: block; width: 100%; }
+  .opt .name { font: 600 11px/1.4 ui-monospace, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; margin-top: 8px; }
+  .opt .desc { color: var(--ink-soft); font-size: 12px; }
+
+  /* About page mock: the real 680px reading column. */
+  .col { max-width: 680px; margin: 0 auto; }
+  .about { display: grid; grid-template-columns: 1fr 260px; gap: 28px; align-items: start;
+           background: var(--surface); border: 1px solid var(--hairline); border-radius: 18px; padding: 28px; }
+  .about h3 { font-size: 26px; line-height: 1.2; margin: 0 0 10px; font-weight: 500; }
+  .about p { color: var(--ink-soft); margin: 0 0 12px; }
+  .about img { width: 100%; display: block; }
+  .eyebrow { font: 600 11px/1 ui-monospace, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+
+  /* Chat mock: the modal, with the portrait as a faint background. */
+  .chat { position: relative; width: 440px; height: 560px; overflow: hidden;
+          background: var(--surface); border: 1px solid var(--hairline); border-radius: 18px; display: flex; flex-direction: column; }
+  .chat .bgart { position: absolute; right: -60px; bottom: -40px; width: 380px; opacity: .10; pointer-events: none; }
+  .dark .chat .bgart { opacity: .14; }
+  .chat header { position: relative; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--hairline); }
+  .chat header .disc { width: 40px; height: 40px; border-radius: 999px; background: var(--accent-tint); overflow: hidden; display: flex; align-items: flex-end; }
+  .dark .chat header .disc { background: #51675c; }
+  .chat header .disc img { width: 100%; }
+  .chat header b { font-weight: 600; font-size: 14px; }
+  .msgs { position: relative; padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .b { max-width: 78%; padding: 9px 13px; border-radius: 14px; font-size: 13px; }
+  .b.them { background: var(--accent-tint); align-self: flex-start; }
+  .b.me { background: var(--accent); color: #fff; align-self: flex-end; }
+  .dark .b.me { color: #0e1613; }
+  .composer { position: relative; margin: 0 16px 16px; border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 12px; color: var(--ink-soft); font-size: 13px; background: var(--surface); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+</style>
+
+<div class="band" id="light"></div>
+<div class="band dark" id="dark"></div>
+
+<script>
+const OPTS = [
+  ["01-line-art", "Fine line art", "Matches the shipped chat avatar exactly - same pale body, same round green spectacles. Regenerated to fix the extra pair of hind flippers."],
+  ["02-soft-gouache", "Soft gouache", "Painted, grey-green fur. Softest of the two; glasses read faintly."],
+];
+
+function build(root, theme) {
+  root.innerHTML = `
+    <h1>Snuffy the Cosmetologist - full body${theme === "dark" ? " (dark)" : " (light)"}</h1>
+    <p class="sub">1200 x 1600 transparent PNG, 3:4. Generated at 2K (1792 x 2400) and keyed down.</p>
+
+    <h2>The four options</h2>
+    <div class="row">${OPTS.map(([id, label, desc]) => `
+      <div class="opt">
+        <div class="plate"><img src="${id}.png" alt="${label}"></div>
+        <div class="name">${id}</div>
+        <div class="desc">${desc}</div>
+      </div>`).join("")}
+    </div>
+
+    <h2>In an About-page section (680px reading column)</h2>
+    <div class="col">${OPTS.map(([id, label]) => `
+      <div class="about" style="margin-bottom:20px">
+        <div>
+          <div class="eyebrow">Meet Snuffy</div>
+          <h3>The cosmetologist who reads the label so you do not have to</h3>
+          <p>Snuffy is a seal. A magical one, and a career cosmetologist. He knows what is in a
+             bottle, what it actually does, and what it is quietly hoping you will not notice.</p>
+          <p style="font-size:12px;opacity:.7">${id}</p>
+        </div>
+        <img src="${id}.png" alt="${label}">
+      </div>`).join("")}
+    </div>
+
+    <h2>As a chat background (10% light / 14% dark)</h2>
+    <div class="grid2">${OPTS.map(([id, label]) => `
+      <div class="chat">
+        <img class="bgart" src="${id}.png" alt="">
+        <header>
+          <span class="disc"><img src="${id}.png" alt=""></span>
+          <b>Snuffy The Cosmetologist</b>
+        </header>
+        <div class="msgs">
+          <div class="b them">Right. Your routine leans on that niacinamide serum, so let us start there.</div>
+          <div class="b me">Can I use it with the retinoid?</div>
+          <div class="b them">You can. Same night is fine - niacinamide is not the one that will pick a fight.</div>
+          <div class="b them" style="font-size:11px;opacity:.6">${id}</div>
+        </div>
+        <div class="composer">Ask Snuffy about your routine...</div>
+      </div>`).join("")}
+    </div>`;
+}
+build(document.getElementById("light"), "light");
+build(document.getElementById("dark"), "dark");
+</script>

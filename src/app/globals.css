@@ -79,6 +79,18 @@ body {
   min-height: 100vh;
 }
 
+/* Snuffy watermarked behind the chat transcript. Opacity rather than a colour
+   token, because the artwork is one fixed PNG and only how far it fades changes
+   between themes - and it has to fade LESS in dark mode, where a mid-tone
+   drawing on a dark panel loses itself faster than it does on a light one. */
+.snuffy-chat-art {
+  opacity: 0.12;
+}
+
+:root.dark .snuffy-chat-art {
+  opacity: 0.16;
+}
+
 button:focus-visible {
   outline: 2px solid var(--color-ss-accent);
   outline-offset: 2px;

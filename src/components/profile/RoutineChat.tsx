@@ -277,10 +277,41 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={`Discuss your ${title} routine with Snuffy the Cosmetologist`}
-        className="relative w-full sm:max-w-[560px] h-[88dvh] sm:h-[min(660px,86dvh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
+        className="relative isolate w-full sm:max-w-[560px] h-[88dvh] sm:h-[min(660px,86dvh)] flex flex-col overflow-hidden bg-ss-panel border border-ss-hairline rounded-t-2xl sm:rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]"
       >
+        {/*
+          Snuffy himself, faded into the corner behind the conversation. He is
+          the dialog's FIRST child so every panel after him paints on top: the
+          header and composer both carry an opaque `bg-ss-surface`, and every
+          message bubble has its own background, so the art never ends up under
+          running text. He also sits outside the scroll container on purpose,
+          so he stays put while the transcript moves. Decorative only.
+
+          The z-index is not decoration: an absolutely positioned element paints
+          in a LATER phase than its in-flow siblings, so without `z-0` here and
+          `z-10` on the three panels below, Snuffy paints on top of the composer
+          rather than behind it.
+
+          The two sizings are different on purpose. On a phone he is a corner
+          crop, bled off the right and bottom edges - at any larger size he
+          fills a 393px dialog and crowds the text. From `sm` up he is shown
+          WHOLE, inset far enough to clear both opaque panels: the header is
+          79px and the composer 91px, so his height is capped at the dialog
+          minus 194px (that chrome plus a 12px gap top and bottom) and he sits
+          103px off the bottom. The cap is what keeps him intact on a short
+          window, where the dialog is 86dvh rather than its full 660px.
+        */}
+        <Image
+          src="/snuffy/snuffy-portrait.png"
+          alt=""
+          aria-hidden="true"
+          width={800}
+          height={1067}
+          className="snuffy-chat-art pointer-events-none select-none absolute z-0 -right-[40px] -bottom-[28px] w-[250px] h-auto sm:right-[18px] sm:bottom-[103px] sm:w-auto sm:h-[min(410px,calc(100%-194px))]"
+        />
+
         {/* Header */}
-        <div className="shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
+        <div className="relative z-10 shrink-0 flex items-start gap-3 px-[18px] py-[14px] border-b border-ss-hairline bg-ss-surface">
           {/*
             Snuffy himself, rather than a generic speech bubble. Decorative - the
             heading beside it already names him. The plate is its own token
@@ -288,13 +319,14 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
             near-black in dark mode and the disc disappears into the header.
           */}
           <span className="shrink-0 mt-[2px] w-12 h-12 rounded-full bg-ss-avatar-plate overflow-hidden inline-flex items-end justify-center">
-            {/* Bottom-aligned and full-bleed: Snuffy sits IN the disc like a
-                portrait cropped by its frame, rather than floating clear of the
-                bottom. The PNG is tight-cropped for the same reason - the
-                draft's 6% breathing margin reads as a gap at this size. The
-                plate still shows, in the corners the dome leaves transparent. */}
+            {/* Cropped straight out of `snuffy-portrait.png` - head, shoulders
+                and coat lapels - so the disc and the watermark behind the
+                transcript are the same drawing of him. A square that fills the
+                48px disc edge to edge, so he is framed BY the circle; the plate
+                shows only in the corners the dome leaves transparent. The older
+                line-art bust is still in `public/snuffy/snuffy-avatar.png`. */}
             <Image
-              src="/snuffy/snuffy-avatar.png"
+              src="/snuffy/snuffy-avatar-gouache.png"
               alt=""
               width={48}
               height={48}
@@ -334,7 +366,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         </div>
 
         {/* Conversation */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-[18px] py-4 grid content-start gap-3">
+        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-[18px] py-4 grid content-start gap-3">
           {choosing && (
             <div className="py-2">
               <p className="text-[14.5px] leading-[1.55] text-ss-ink m-0 mb-1 [text-wrap:pretty]">
@@ -426,7 +458,7 @@ export function RoutineChat({ quizId, title, subtitle, onClose }: Props) {
         </div>
 
         {/* Composer */}
-        <div className="shrink-0 border-t border-ss-hairline bg-ss-surface px-[18px] py-3">
+        <div className="relative z-10 shrink-0 border-t border-ss-hairline bg-ss-surface px-[18px] py-3">
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}

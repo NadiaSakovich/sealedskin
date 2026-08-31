@@ -19,6 +19,8 @@ receives an AM/PM routine plus example product picks.
 - `src/app/page.tsx` — renders `<SkinQuiz />` (the whole experience).
 - `src/app/{about,how-it-works}/page.tsx` — static content routes (server components) shown from
   the header nav. They use `ContentShell` (header + reading column, no quiz progress rail).
+  `/about` carries a **"Meet Snuffy"** panel (between "How we build your routine" and "Your
+  privacy") introducing the chat assistant, with his full-body portrait beside the copy.
 - `src/app/profile/page.tsx` — the **user profile** route (server component → renders the client
   `components/profile/ProfileView`, also in `ContentShell`). Shows the signed-in user's Google
   identity (photo/name/email) and their **saved routines** list; reached from the header account
@@ -433,7 +435,9 @@ and the main card's footer stays close to the secondary cards'. What makes it th
 accent **fill**, not a bigger or different label.
 
 - `components/profile/RoutineChat.tsx` - the modal (`role="dialog"`, Esc / backdrop / ✕ to close,
-  body scroll lock, starter chips on an empty conversation, typing indicator, "Clear chat"). It
+  body scroll lock, starter chips on an empty conversation, typing indicator, "Clear chat"). Snuffy
+  himself is watermarked into the bottom-right behind the transcript - see "The chat watermark"
+  under Snuffy's portrait and avatar, including the paint-order gotcha. It
   posts **only a question**: the routine context is read server-side, so the client can't forge it.
   Assistant text renders as plain paragraphs and `- ` bullets - deliberately **not** a markdown
   renderer (a dependency plus an injection surface for what is only a formatting habit).
@@ -593,31 +597,78 @@ does NOT exercise this. Test it through `buildAiResult` or the UI.
 (`productsByType` from its snapshot), not re-fetched — so an old save keeps its original (possibly
 pre-fix) picks until rebuilt.
 
-## Snuffy's avatar
+## Snuffy's portrait and avatar
 
-The chat window's header shows Snuffy himself (`public/snuffy/snuffy-avatar.png`, 192px PNG with
-alpha, rendered by `next/image` at **48px**), not the generic speech-bubble SVG it replaced.
+Three files in `public/snuffy/`, two of them live:
 
-- **Sits in a 48px circular plate, full-bleed and bottom-aligned** - Snuffy is cropped BY the disc
-  like a portrait by a round frame, not floating inside it. Two things are load-bearing here: the
-  wrapper is `items-end`, and the PNG is exported **tight-cropped**. The draft PNGs carry a 6%
-  breathing margin from `key.py`, which at 48px reads as a gap between his body and the bottom of
-  the circle. Re-export tight if you swap variants. `alt=""` - decorative, the heading names him.
+- **`snuffy-portrait.png`** - the full-body portrait: Snuffy in round spectacles and a clinician's
+  lab coat, holding a blank jar of cream. 800x1067 PNG with alpha (palette-quantised, 82KB), a 3:4
+  portrait. Used **twice**: the **"Meet Snuffy"** block on `/about`, and as a faded watermark behind
+  the routine chat's transcript.
+- **`snuffy-avatar-gouache.png`** - the chat header's 48px disc (192px PNG, 8KB), cropped from the
+  **top-right of that same portrait**: head, shoulders and coat lapels. Deliberately the same
+  drawing as the watermark, so the disc and the background are one character, not two.
+- **`snuffy-avatar.png`** - the ORIGINAL line-art bust, no longer referenced by the app but
+  **deliberately kept**. It is the other of the two characters that were drawn, and the code comment
+  in `RoutineChat` points at it. Don't tidy it away.
+
+### The chat watermark
+
+`RoutineChat` renders the portrait as the dialog's **first child**, absolutely positioned in the
+bottom-right, `aria-hidden`. It sits OUTSIDE the scroll container, so it stays put while the
+transcript moves.
+
+- **Opacity is a token-style CSS rule, not a `dark:` utility** - `.snuffy-chat-art` in `globals.css`
+  is `0.12`, and `:root.dark .snuffy-chat-art` is `0.16`. There are **zero `dark:` utilities in this
+  codebase** (everything re-themes through the `:root.dark` block), and the dark value has to be
+  higher because a mid-tone drawing on a dark panel loses itself faster than on a light one.
+- **Gotcha - an absolutely positioned element paints ABOVE its in-flow siblings**, whatever the DOM
+  order. Being the first child was not enough: Snuffy painted on top of the composer. Fixed with
+  `isolate` on the dialog (so the z-order argument stays local), `z-0` on the art and `relative
+  z-10` on the header, transcript and composer. The transcript keeps a transparent background - it
+  is the one panel he shows through - and every message bubble has its own opaque background, so the
+  art never ends up under running text.
+- **Two sizings, and the difference is not decoration.** On a phone he is a corner crop bled off the
+  right and bottom (`w-[250px]`); at any larger size he fills a 393px dialog and crowds the persona
+  chooser. From `sm` up he is shown **whole**, sized by a clamp:
+  `sm:h-[min(410px,calc(100%-194px))]`. The 194 is the real chrome - a **79px** header plus a
+  **91px** composer plus a 12px gap top and bottom - so on a short window, where the dialog is
+  `86dvh` rather than its full 660px, he shrinks instead of tucking under a panel. Verified down to
+  a 660px-tall viewport.
+- He is *behind* the transcript, so a long conversation covers him from the top down. That is
+  inherent to a watermark; he is fully clear on an empty conversation, which is the landing state.
+
+### The disc
+
+- **48px circular plate, full-bleed** - Snuffy is cropped BY the disc like a portrait by a round
+  frame. The avatar PNG is a **square** that fills the disc edge to edge, so the plate shows only in
+  the corners the dome leaves transparent. (The wrapper's `items-end` is a leftover from the old
+  tight-cropped bust, where bottom-alignment was load-bearing; it is harmless for a square.)
+  `alt=""` - decorative, the heading beside it names him.
 - **The plate has its own token, `--color-ss-avatar-plate`**, and it is the one place the dark value
   is deliberately *lighter* than its surface rather than darker (`#51675c` on `#1c2723`). Reusing
   `ss-accent-tint` does not work: that inverts to `#21301a` and the disc disappears into the header
   band. Measured against the alternatives - the sage accent `#7a9e54` reads as a loud green blob and
   competes with the accent text next to it, and a pale plate washes out Snuffy's own pale body.
-- **Drafts live in `design-drafts/snuffy-avatar/`** with a `preview.html` that shows each option
-  inside a replica of the real header, light and dark, at 36/48/56/72px. Three characters are kept:
-  `02-line-art` (**the one implemented**), `03-soft-gouache` (scarf) and `16-fur-mid-olive`
-  (clinician's coat). Swapping is a re-export of the 512px draft plus a file replace - but mind the
-  image-optimizer stale-variant gotcha below: overwriting a file in `public/` needs a full
-  `rm -rf .next`.
 
-### Generating these (two gotchas that cost real time)
+### Drafts
 
-Both bite anything generated with `gemini-3-pro-image`, not just this avatar:
+- **`design-drafts/snuffy-avatar/`** - the original bust drafts, with a `preview.html` showing each
+  inside a replica of the real header at 36/48/56/72px. Three kept: `02-line-art` (the one that
+  shipped as `snuffy-avatar.png`), `03-soft-gouache` and `16-fur-mid-olive`.
+- **`design-drafts/snuffy-portrait/`** - the full-body drafts, 1200x1600 with alpha, plus a
+  `preview.html` that shows each on the real light and dark surfaces, in an About-page section on
+  the 680px reading column, and faded behind a chat mock. Two kept: **`02-soft-gouache`** (the one
+  that shipped) and `01-line-art`. `gen-fix2.mjs` and `key.py` sit alongside them, so a re-run needs
+  no reconstruction - but note `.gitignore` has `/design-drafts/*/raw/`, so the 2K source JPEGs are
+  local only and `key.py` has nothing to key on a fresh clone. Re-run the generator first. The
+  winning prompt is in `gen-fix2.mjs` itself, not only in the ignored `raw/_meta.json`.
+- Swapping either is a re-export plus a file replace - but mind the image-optimizer stale-variant
+  gotcha below: overwriting a file in `public/` needs a full `rm -rf .next`.
+
+### Generating these (gotchas that cost real time)
+
+These bite anything generated with `gemini-3-pro-image`, not just Snuffy:
 
 - **Asking for "a transparent background" makes the model PAINT A CHECKERBOARD** - a literal grey and
   white grid baked into an opaque JPEG. It never returns alpha. Generate on a flat magenta `#FF00FF`
@@ -632,6 +683,19 @@ Both bite anything generated with `gemini-3-pro-image`, not just this avatar:
 - A variant may also draw a panel or frame behind the subject, which survives the key as a
   rectangle. A corner flood-fill removes an unstroked one; a stroked one needs a regeneration with
   explicit anti-frame wording.
+- **`imageConfig.imageSize: "2K"` is accepted and gives 1792x2400 at 3:4** - four times the pixels
+  of the default (~896x1200), for one call. The avatar run did not know this and generated at the
+  default. Ask for 2K when the art will be shown at any size, then downscale.
+- **Anatomy needs a COUNT, and then a shape to stop the overcorrection.** The first full-body
+  line-art render gave Snuffy a spare pair of hind flippers (a flipper planted on one side AND a
+  tail ending in two more). Stating the count - "2 front + 2 hind = 4", with the hind pair joined at
+  the end of one tail - fixed it in 6 of 6 candidates, but every one of them then drew a long
+  curling **mermaid tail**. It took a second clause pushing the other way (stout, barrel-shaped,
+  "the rear is SHORT and THICK", "think of a real harbour seal hauled out on a rock") to get both
+  right. Same prompt-and-counterweight shape as the region and minimal-routine rules.
+- **Generate several candidates and pick.** The gouache render got the anatomy right first time from
+  a nearly identical prompt, so the extra limbs were a sampling accident, not a prompt failure. One
+  render proves nothing here either.
 
 ## Quiz imagery
 
@@ -685,6 +749,15 @@ Both bite anything generated with `gemini-3-pro-image`, not just this avatar:
   Chrome, including its device emulation: it is native Safari behaviour, so it can only be
   confirmed on a real device. It cost us the Snuffy chat's whole width on iPhone (`c328bb5`);
   that textarea is currently the app's ONLY text input, which is why nothing else showed it.
+- **An absolutely positioned element paints ABOVE its in-flow siblings**, whatever the DOM order —
+  CSS paints positioned descendants in a later phase than in-flow content. So a decorative
+  background placed as a container's first child will sit on top of its opaque sibling panels, not
+  behind them. Give the container `isolate`, the art `z-0` and the panels `relative z-10`. This bit
+  the Snuffy chat watermark, which painted over the composer.
+- **This codebase has ZERO `dark:` utilities.** Dark mode works by redefining tokens in the
+  `:root.dark` block, so anything that must differ between themes but is not a colour (an opacity,
+  say) belongs in a plain CSS rule pair there, not in a `dark:` variant — which is not even
+  configured for the `.dark` class in this Tailwind v4 setup.
 - Buttons go through `ui/Button.tsx` (`variant="primary" | "ghost"`); the primary CTA has the
   `bg-ss-accent` class (handy selector for E2E driving).
 - Preserve the safety logic in `actives.ts`: SPF + a hydrator are always included; actives
@@ -1045,6 +1118,27 @@ client path drives normally:
       already stored), and rebuilt the trim to delete by id from the ordered history. 6/6 unit tests.
       **Note the server half is still untested end-to-end** - the comparator is unit-tested and the
       route is type-checked, but no test exercises the real Firestore read.
+
+30. **Snuffy gets a full-body portrait, on the About page and behind the chat (this session):**
+    - Generated a full-body Snuffy (spectacles, lab coat, jar of cream) with `gemini-3-pro-image` at
+      **2K** on the magenta chroma key, four styles previewed on the real surfaces; the **soft
+      gouache** one was chosen. Both survivors are kept in `design-drafts/snuffy-portrait/` with
+      their prompts and scripts. See "Snuffy's portrait and avatar".
+    - **The line-art option needed two rounds of anatomy fixing** - a spare pair of hind flippers,
+      then a mermaid tail once the limb count was enforced. Both gotchas are written up above; the
+      short version is that a count needs a counterweight describing the body's shape.
+    - **`/about` gained a "Meet Snuffy" panel** between "How we build your routine" and "Your
+      privacy": two paragraphs on who he is and what he does, portrait beside them.
+    - **The chat now has him as a watermark** behind the transcript, `0.12` light / `0.16` dark via
+      a `.snuffy-chat-art` rule (no `dark:` utilities in this codebase). Whole portrait on `sm` and
+      up, clamped so it never collides with the header or composer; a corner crop on phones.
+    - **New header avatar** (`snuffy-avatar-gouache.png`) cropped from the top-right of that same
+      portrait, so the disc and the watermark are one drawing. The old line-art bust is kept.
+    - Verified: `tsc`/ESLint clean, `next build` passes; Playwright drove the About panel and the
+      chat modal with a fake Firebase session across light, dark, empty conversation, a 660px-tall
+      window and an iPhone viewport - portrait fully visible and aspect-correct in every desktop
+      case, 0 console errors throughout. The **server half of the chat is still not E2E-tested**,
+      as before.
 
 ## Likely next steps
 
