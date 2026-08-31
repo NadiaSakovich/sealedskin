@@ -1,0 +1,20 @@
+[
+  {
+    "file": "01-line-art.png",
+    "kb": 1082,
+    "transparentPct": 62.7,
+    "subject": "1152x1203",
+    "canvas": "1200x1600",
+    "id": "01-line-art",
+    "label": "Fine line art"
+  },
+  {
+    "file": "02-soft-gouache.png",
+    "kb": 1362,
+    "transparentPct": 56.4,
+    "subject": "1152x1476",
+    "canvas": "1200x1600",
+    "id": "02-soft-gouache",
+    "label": "Soft gouache"
+  }
+]

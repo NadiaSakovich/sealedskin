@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
 import { PageBanner } from "@/components/ui/PageBanner";
@@ -50,6 +51,31 @@ export default function AboutPage() {
         products and prices while it does, then it gets checked against a fixed set of safety rules
         before it reaches you.
       </p>
+
+      <h2 className={sectionH}>Meet Snuffy</h2>
+      <div className="mt-4 flex flex-col-reverse sm:flex-row items-center gap-4 sm:gap-6 rounded-2xl border border-ss-hairline bg-ss-panel px-5 py-5">
+        <div className="flex-1 min-w-0">
+          <p className={para}>
+            Every saved routine comes with a cosmetologist attached. Snuffy is a seal - a magical
+            one - and he has been doing this for years. Open a chat with him from your account and
+            ask why an ingredient is in your routine, whether two products will get along, or what
+            to use instead when something stings.
+          </p>
+          <p className={`${para} mt-3`}>
+            He looks up current reviews before he recommends anything, and he follows the same
+            safety rules your routine was built under. He will also tell you plainly when the
+            honest answer is to go and see a dermatologist. You choose how he talks to you: warm
+            and encouraging, or dry and direct.
+          </p>
+        </div>
+        <Image
+          src="/snuffy/snuffy-portrait.png"
+          alt="Snuffy the Cosmetologist: a seal in a lab coat and round spectacles, holding a jar of cream"
+          width={800}
+          height={1067}
+          className="shrink-0 w-[150px] sm:w-[186px] h-auto"
+        />
+      </div>
 
       <h2 className={sectionH}>Your privacy</h2>
       <p className={para}>
