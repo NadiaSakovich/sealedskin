@@ -804,6 +804,57 @@ nothing to rank on for "skincare routine quiz" and similar. The technical layer 
 ranking from here is a content question (a real landing section above or beside the quiz, or
 indexable per-concern/per-skin-type pages), not a metadata one.
 
+## Contact form
+
+`/contact` is a fourth content route, in the header nav beside How it works and About. It sends a
+message straight to the developer's inbox; there is no ticketing system behind it.
+
+- `src/app/contact/page.tsx` - server component in `ContentShell`, metadata via `pageMetadata`.
+  Renders the client `components/contact/ContactForm` inside a panel, then a short "What is worth
+  writing about" section that also says the form is **not** for medical questions.
+- `components/contact/ContactForm.tsx` - Name / Email address / Your message / Send. On success the
+  confirmation **replaces** the form rather than sitting above it: leaving a filled-in form on
+  screen invites a second identical send. "Send another message" resets it.
+- `app/api/contact/route.ts` - `POST` only, Node runtime. Validates, then sends through **Resend**.
+
+**Email goes through Resend, provisioned from the Vercel Marketplace** (`vercel integration add
+resend/resend-email`), which sets `RESEND_API_KEY` on the project. Two more env vars:
+`CONTACT_TO_EMAIL` (the destination) and `CONTACT_FROM_EMAIL`.
+
+**The From address must be on a domain verified in Resend.** Resend's shared
+`onboarding@resend.dev` only delivers to the **Resend account owner's own address**, which for a
+Vercel-provisioned account is the Vercel account email, not necessarily the inbox we want - so
+using it would 403. `sealedskin.com` is verified in Resend and the form sends from
+`contact@sealedskin.com`, with the visitor's address as **`replyTo`** so a reply in Gmail goes to
+them rather than to the site.
+
+Without `RESEND_API_KEY` or `CONTACT_TO_EMAIL` the route returns **503** and says the form is
+unavailable, rather than failing silently - so local development and preview deploys need no setup.
+
+**Three layers of abuse handling, because the page is public and indexed:**
+
+1. **Honeypot** - a `hidden`, `aria-hidden`, `tabIndex={-1}` input named `website`. A bot that fills
+   every field it finds trips it. The response is **200 `{ok:true}`**, so the bot believes it
+   succeeded and does not retry with a different shape; nothing is sent.
+2. **Rate limit** - 3 per 10 minutes per IP, in-memory. It will not stop a determined attacker and
+   is not meant to; it stops a bot or a stuck retry loop emptying the Resend quota into an inbox.
+   **Checking and recording are deliberately separate:** counting every request meant three mistyped
+   email addresses - which send nothing - locked a person out for ten minutes. Only a real send
+   attempt or a honeypot trip spends from the budget; a validation failure is free. This was caught
+   by driving the endpoint, not by reading it.
+3. **Header injection** - `headerSafe()` strips CR/LF from the name and email before they go into
+   `Subject` and `replyTo`. Resend posts over HTTPS rather than SMTP so this is belt-and-braces, but
+   both values are attacker-controlled and both land in header position. `escapeHtml()` covers the
+   HTML body.
+
+Error responses are deliberately vague about *why* a send failed, so the endpoint cannot be used to
+probe the configuration. The real reason is logged (`contact.sendFailed` carries Resend's message).
+
+**The inputs are `text-[16px] sm:text-[14px]`** - the iOS zoom rule from the gotchas below. These
+are the app's first inputs since the Snuffy chat textarea, and the same trap applies: it is
+invisible in Chrome, including device emulation. Verified by reading the computed font size at a
+390px viewport, not a desktop one - at desktop 14px is correct and the check passes meaninglessly.
+
 ## Conventions & gotchas
 
 - **Strict TS** — no unused locals/params; build fails otherwise.
@@ -1236,6 +1287,23 @@ client path drives normally:
       "Canonical host and the vercel.app duplicate" above.
     - **Not done, and the real remaining lever:** the home page's server-rendered content is one
       heading and one paragraph. Ranking beyond brand-name searches needs content, not metadata.
+
+32. **Contact page and form (this session):** a new `/contact` route in the header nav, with a
+    Name / Email address / Your message form that emails the developer through **Resend**
+    (provisioned from the Vercel Marketplace - the only messaging integration there). Added
+    `app/contact/page.tsx`, `components/contact/ContactForm.tsx`, `app/api/contact/route.ts`, a nav
+    entry, and `/contact` in `sitemap.ts` and `llms.txt`. See "Contact form" above.
+    - **A rate-limit ordering bug was caught by driving the endpoint:** counting every request meant
+      three mistyped email addresses locked a person out for ten minutes without a single email
+      being sent. Checking and recording are now separate.
+    - Verified: the API over 5 paths (validation, honeypot, unconfigured 503, send failure 502, and
+      the 429 after 3 real attempts, forced past the config check with a fake key); a Playwright
+      drive of the real UI covering the nav entry, labelled fields, the invisible honeypot, an error
+      that keeps the form filled, the success confirmation and its reset, dark mode, and a 390px
+      phone viewport with no horizontal overflow. **Inputs measured at 16px on the phone viewport**
+      and 14px at desktop. 0 unexpected console errors.
+    - **Not exercised: a real delivered email.** That needs the Resend domain verification to be
+      finished; everything up to the Resend API call is tested.
 
 ## Likely next steps
 

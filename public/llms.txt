@@ -13,6 +13,7 @@ Everything on the site is general skincare guidance and no substitute for a derm
 - [Home - take the quiz](https://www.sealedskin.com/): The quiz itself. Three stages - skin type (seven diagnostic questions), concerns (pick any, then star up to three), and preferences (how many steps, which region's brands, pregnancy or nursing). Ends with the routine, ingredients and product picks.
 - [How it works](https://www.sealedskin.com/how-it-works): The four stages explained step by step, plus what sits behind the suggestions - the always-included steps, the pregnancy filter, and the role of the AI.
 - [About](https://www.sealedskin.com/about): Why the routines are short, how they are built, who Snuffy is, what happens to your answers, and the safety caveats.
+- [Contact us](https://www.sealedskin.com/contact): A form that sends a message straight to the developer. The right place for a bug, a strange routine, or a suggestion. Not for medical questions.
 
 ## What a routine contains
 
