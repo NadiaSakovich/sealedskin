@@ -53,3 +53,9 @@ notes.txt
 # Chroma-key originals behind the Snuffy avatar drafts. The keyed 512px PNGs in
 # design-drafts/ are committed and are enough to re-export any smaller size.
 /design-drafts/*/raw/
+
+# Resend's agent skills, installed by `vercel integration add resend/resend-email`.
+# Vendored markdown from resend/resend-skills - regenerable, ~550KB, and not part
+# of the app. `skills-lock.json` IS committed, so what was installed is recorded.
+/.agents/
+/.claude/skills/
