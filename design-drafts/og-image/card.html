@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e8f0ed; --panel:#f6faf8; --ink:#243f39; --ink-soft:#5a716b;
+    --hairline:#dbe7e2; --accent:#7a9e54; --accent-tint:#eaf1e6; --accent-ink:#5c7b47;
+    --on-accent:#f6faf8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1200px;height:630px;background:var(--bg);font-family:"Hanken Grotesk",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+  .card{position:relative;width:1200px;height:630px;display:flex}
+  .left{flex:1;padding:64px 0 64px 76px;display:flex;flex-direction:column;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:16px}
+  .mark{width:52px;height:52px;border:2.5px solid var(--ink);border-radius:999px;display:flex;align-items:center;justify-content:center;
+        font-family:"Schibsted Grotesk",sans-serif;font-weight:700;font-size:23px;letter-spacing:-2px;padding-right:1px}
+  .word{font-family:"Schibsted Grotesk",sans-serif;font-weight:600;font-size:29px;letter-spacing:-0.02em}
+  h1{font-family:"Schibsted Grotesk",sans-serif;font-weight:600;font-size:63px;line-height:1.06;letter-spacing:-0.03em;max-width:600px;text-wrap:balance}
+  .sub{margin-top:22px;font-size:24px;line-height:1.45;color:var(--ink-soft);max-width:530px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{font-family:"Spline Sans Mono",monospace;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;
+        background:var(--accent-tint);color:var(--accent-ink);border:1px solid var(--hairline);border-radius:999px;padding:9px 16px}
+  .chip.solid{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+  .right{width:470px;position:relative;flex-shrink:0}
+  .right img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .fade{position:absolute;inset:0;background:linear-gradient(90deg,var(--bg) 0%,rgba(232,240,237,0.92) 20%,rgba(232,240,237,0.4) 48%,rgba(232,240,237,0) 84%)}
+</style></head>
+<body>
+  <div class="card">
+    <div class="left">
+      <div class="brand"><div class="mark">SS</div><div class="word">SealedSkin</div></div>
+      <div>
+        <h1>Build your personalised skincare routine</h1>
+        <p class="sub">Seven questions about your skin. A morning and evening routine you can actually keep.</p>
+      </div>
+      <div class="chips">
+        <span class="chip solid">Free quiz</span>
+        <span class="chip">About a minute</span>
+        <span class="chip">3-4 steps</span>
+      </div>
+    </div>
+    <div class="right">
+      <img src="file:///Users/nodi_melamori/Projects/sealedskin/public/quiz/intro-skin-1.jpg" alt="">
+      <div class="fade"></div>
+    </div>
+  </div>
+</body></html>

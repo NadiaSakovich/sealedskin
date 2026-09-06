@@ -3,12 +3,17 @@ import Image from "next/image";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
 import { PageBanner } from "@/components/ui/PageBanner";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About - SealedSkin",
-  description:
-    "What SealedSkin is, why the routines are short, and what happens to your answers.",
-};
+const TITLE = "About";
+const DESCRIPTION =
+  "What SealedSkin is, why the routines are short, and what happens to your answers.";
+
+export const metadata: Metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/about",
+});
 
 const eyebrow = "font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3";
 const sectionH = "font-head font-semibold text-[20px] leading-[1.2] tracking-[-0.02em] text-ss-ink mt-9 mb-3";

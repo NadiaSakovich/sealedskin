@@ -2,12 +2,18 @@ import type { Metadata } from "next";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
 import { PageBanner } from "@/components/ui/PageBanner";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { absoluteUrl, pageMetadata, SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "How it works - SealedSkin",
-  description:
-    "How SealedSkin turns seven questions about your skin into a personalised morning and evening skincare routine.",
-};
+const TITLE = "How it works";
+const DESCRIPTION =
+  "How SealedSkin turns seven questions about your skin into a personalised morning and evening skincare routine.";
+
+export const metadata: Metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/how-it-works",
+});
 
 const STEPS: { title: string; body: string }[] = [
   {
@@ -30,9 +36,35 @@ const STEPS: { title: string; body: string }[] = [
 
 const eyebrow = "font-mono text-[11.5px] tracking-[0.13em] uppercase text-ss-accent-ink mb-3";
 
+/**
+ * A `HowTo` for the quiz, built from the same `STEPS` array the page renders -
+ * so the structured data cannot drift from the visible copy, which is exactly
+ * what Google penalises.
+ */
+const howToJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "@id": `${absoluteUrl("/how-it-works")}#howto`,
+  name: "How to build a personalised skincare routine with SealedSkin",
+  description: DESCRIPTION,
+  url: absoluteUrl("/how-it-works"),
+  inLanguage: "en",
+  totalTime: "PT1M",
+  image: absoluteUrl("/pages/how-it-works.jpg"),
+  publisher: { "@id": `${SITE_URL}/#organization` },
+  step: STEPS.map((s, i) => ({
+    "@type": "HowToStep",
+    position: i + 1,
+    name: s.title,
+    text: s.body,
+    url: `${absoluteUrl("/how-it-works")}#step-${i + 1}`,
+  })),
+};
+
 export default function HowItWorksPage() {
   return (
     <ContentShell>
+      <JsonLd data={howToJsonLd} />
       <div className={eyebrow}>How it works</div>
       <h1 className="font-head font-semibold text-[32px] leading-[1.1] tracking-[-0.025em] text-ss-ink mb-[14px] max-w-[460px] [text-wrap:balance]">
         Seven questions, one routine
@@ -52,6 +84,7 @@ export default function HowItWorksPage() {
         {STEPS.map((s, i) => (
           <li
             key={s.title}
+            id={`step-${i + 1}`}
             className="bg-ss-panel border border-ss-hairline rounded-2xl p-5 flex gap-4 items-start"
           >
             <span className="shrink-0 w-9 h-9 rounded-full bg-ss-accent-tint text-ss-accent-ink font-head font-semibold text-[16px] inline-flex items-center justify-center">
