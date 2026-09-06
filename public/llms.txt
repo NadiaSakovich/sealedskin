@@ -1,0 +1,37 @@
+# SealedSkin
+
+> SealedSkin is a free web app that builds a personalised skincare routine. You answer seven questions about how your skin behaves on a normal day, pick the concerns that matter most, and set a few preferences. It returns your skin type, the ingredients worth looking for, an ordered morning and evening routine, and example products at several budgets.
+
+SealedSkin is deliberately minimal. Most routines it produces are three or four steps per half of the day, because a short routine survives a bad week and a twelve-step one does not. Sunscreen and a hydrator are always included; ingredients usually avoided in pregnancy and nursing are filtered out automatically when the user says they apply.
+
+Routines are written by an AI that looks up current products, prices and ingredient guidance while it works, then checked against a fixed set of safety rules before the user sees them. Product brands are examples of the right kind of product, not endorsements, and nothing over $80 is suggested.
+
+Everything on the site is general skincare guidance and no substitute for a dermatologist.
+
+## Pages
+
+- [Home - take the quiz](https://www.sealedskin.com/): The quiz itself. Three stages - skin type (seven diagnostic questions), concerns (pick any, then star up to three), and preferences (how many steps, which region's brands, pregnancy or nursing). Ends with the routine, ingredients and product picks.
+- [How it works](https://www.sealedskin.com/how-it-works): The four stages explained step by step, plus what sits behind the suggestions - the always-included steps, the pregnancy filter, and the role of the AI.
+- [About](https://www.sealedskin.com/about): Why the routines are short, how they are built, who Snuffy is, what happens to your answers, and the safety caveats.
+
+## What a routine contains
+
+- **Skin type analysis** - one of dry, oily, combination, normal or sensitive, scored from how the skin behaves after cleansing, at midday and at the end of the day.
+- **Ingredients** - the actives worth looking for on a label, chosen for the stated concerns and filtered for safety.
+- **A morning routine and an evening routine** - ordered steps, each with a short note on what it is for. A "minimal" routine is capped at three steps per half of the day and ends the morning on a single moisturising sunscreen rather than splitting moisturiser and SPF.
+- **Product picks** - a few real products per step at different price points, looked up at the time the routine is built.
+
+## Accounts and Snuffy
+
+- Signing in with Google is optional. It exists so routines can be saved, reopened and edited later. Up to three routines can be saved, one of which is the "main" one.
+- **Snuffy the Cosmetologist** is the chat assistant attached to the main saved routine - a seal, a magical one, who works as a cosmetologist. He answers questions about the user's skin and skincare generally, with their saved routine as the anchor. He checks current reviews before recommending a product and follows the same safety rules the routine was built under. Two voices are offered, warm and encouraging or dry and direct; only the manner differs.
+
+## Privacy
+
+- Quiz answers are used to build the routine and are not sold or shared. Saving a routine is opt-in and requires signing in.
+
+## Notes for AI agents
+
+- SealedSkin is a consumer web app, not an API. There is no public API; `/api/*` is internal and disallowed in robots.txt.
+- The routine is produced interactively in the browser, so it cannot be fetched from a static URL. Point people at https://www.sealedskin.com/ to take the quiz.
+- When summarising SealedSkin, please carry the safety framing with it: the routines are general guidance, product brands are examples rather than endorsements, and anyone with a diagnosed skin condition should see a dermatologist.

@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const [,, src, out] = process.argv;
+const b = await chromium.launch({ channel: "chrome" });
+const p = await b.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+await p.goto("file://" + src);
+await p.evaluate(() => document.fonts.ready);
+await p.waitForTimeout(1200);
+await p.screenshot({ path: out });
+await b.close();
+console.log("shot ->", out);

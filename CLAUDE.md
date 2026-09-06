@@ -728,6 +728,82 @@ These bite anything generated with `gemini-3-pro-image`, not just Snuffy:
 - Placement: on `/how-it-works` between the intro paragraph and the numbered steps; on `/about`
   between the intro paragraph and "What we believe".
 
+## SEO & llms.txt
+
+Everything search-facing is derived from **`src/lib/seo.ts`**, which owns the canonical origin
+(`SITE_URL`, from `NEXT_PUBLIC_SITE_URL`, defaulting to `https://sealedskin.com` - absolute, no
+trailing slash, since `metadataBase` composes relative paths onto it). `robots.txt`, `sitemap.xml`,
+every canonical link, every Open Graph URL and the JSON-LD all read it, so a domain change is one
+env var.
+
+- **`pageMetadata({ title, description, path })`** builds a page's canonical link plus a
+  **complete** Open Graph and Twitter card. All four routes use it. The completeness is not
+  decoration - see the gotcha below.
+- **`app/robots.ts`** allows everything except `/api/` (endpoints, and `/api/routine` costs a paid
+  model call per fetch) and `/profile`. **`app/sitemap.ts`** lists the three indexable routes with a
+  **hand-kept `lastModified`** rather than `new Date()`: a build timestamp would claim every page
+  changed on every deploy, which teaches crawlers to ignore the field. Bump the entry when the copy
+  actually changes.
+- **`/profile` is `noindex, nofollow`** in its own metadata *as well as* disallowed in robots.txt -
+  robots.txt stops the fetch, the meta tag stops indexing if it is reached another way.
+- **Structured data** goes through `components/seo/JsonLd.tsx` (escapes `<` so a payload can't break
+  out of the tag). The root layout emits `Organization` + `WebSite`; `/` adds a `WebApplication`
+  (free, no login required); `/how-it-works` adds a **`HowTo` built from the same `STEPS` array the
+  page renders**, so the structured data cannot drift from the visible copy - which is precisely
+  what Google penalises. The step `<li>`s carry matching `id="step-N"` anchors.
+- **`public/llms.txt`** is the AI-crawler summary (the llms.txt convention): what SealedSkin is, the
+  three pages, what a routine contains, accounts and Snuffy, privacy, and a note that there is no
+  public API. It asks summarisers to carry the safety framing with them. It is hand-written prose,
+  not generated - update it when the product changes.
+- **Search Console:** `verification.google` reads `GOOGLE_SITE_VERIFICATION` and renders nothing
+  when unset. DNS TXT verification at Cloudflare is the better route here (covers subdomains, needs
+  no redeploy).
+
+### Canonical host and the vercel.app duplicate
+
+**The canonical host is `www.sealedskin.com`, not the apex.** Vercel has `www` as the project's
+primary domain and 308s `sealedskin.com` to it. A canonical tag naming a host that redirects is a
+soft error - it sends every crawler through a hop and names a URL that is not the one finally
+served - so `SITE_URL` must always be the host that answers **200**. If the primary domain is ever
+flipped to the apex in the Vercel dashboard, `SITE_URL` (or `NEXT_PUBLIC_SITE_URL`) and
+`next.config.ts` have to move with it.
+
+**`sealedskin.vercel.app` served the entire site as an indexable duplicate** - 200, no
+`x-robots-tag` of its own (Vercel only noindexes *preview* URLs, not the production alias).
+`next.config.ts` now 308s it to `SITE_URL`:
+
+- It is a **`redirects()` entry, not proxy/middleware** - Vercel compiles `redirects()` into its
+  routing layer, so it costs no function invocation, while a `proxy.ts` would run on every request.
+  (Note Next 16 renamed `middleware.ts` to `proxy.ts`.)
+- The host is matched **exactly**, which is what keeps **preview deployments working**:
+  those are `sealedskin-git-<branch>-<scope>.vercel.app` and do not match. Verified by driving
+  spoofed `Host` headers against `npm start` - the alias 308s on every path including static
+  assets, two preview-shaped hosts and the real domain all stay 200, and there is no loop.
+- Dots in `has.value` are escaped because the value is a **regular expression**.
+- Redirects run **before** rewrites in Next's routing order, so the Firebase `/__/auth/*` rewrite is
+  unreachable on the alias host. That is correct - `authDomain` should name the canonical host.
+
+**Gotcha - Next does NOT deep-merge `openGraph`.** A page that sets `openGraph` **replaces** the
+layout's object entirely, so `/about` and `/how-it-works` silently lost `og:image`, `og:type` and
+`og:site_name` the moment they set a per-page `og:url`. `twitter` had the mirror-image bug: leaving
+it to the layout gave every page the **home page's** title and description. `pageMetadata` exists to
+make both un-forgettable - it always emits the whole card. Verify by grepping the built HTML, not by
+reading the metadata objects.
+
+**The link-preview card is a screenshot, not `ImageResponse`.** `src/app/opengraph-image.jpg`
+(1200x630) is rendered from `design-drafts/og-image/card.html` with Playwright + system Chrome, and
+committed. `next/og` only bundles Geist, so matching the site would have meant loading three Google
+font TTFs at build time; screenshotting real HTML gets the real fonts, palette tokens and photo for
+free, with no build-time network dependency. `design-drafts/og-image/README.md` has the re-run
+recipe. `opengraph-image.alt.txt` carries the alt text - note it must have **no trailing newline**,
+which lands verbatim in `og:image:alt`.
+
+**Still open - the home page is thin for search.** `/` server-renders one `<h1>` ("Let's figure out
+your skin type") and one paragraph, because it *is* the quiz. That is honest but gives Google almost
+nothing to rank on for "skincare routine quiz" and similar. The technical layer is now complete;
+ranking from here is a content question (a real landing section above or beside the quiz, or
+indexable per-concern/per-skin-type pages), not a metadata one.
+
 ## Conventions & gotchas
 
 - **Strict TS** — no unused locals/params; build fails otherwise.
@@ -1140,8 +1216,35 @@ client path drives normally:
       case, 0 console errors throughout. The **server half of the chat is still not E2E-tested**,
       as before.
 
+31. **SEO groundwork and llms.txt (this session):** added `lib/seo.ts` (canonical origin +
+    `pageMetadata`), `app/robots.ts`, `app/sitemap.ts`, JSON-LD (`Organization`/`WebSite` sitewide,
+    `WebApplication` on `/`, `HowTo` built from the rendered `STEPS` on `/how-it-works`), a
+    `noindex` on `/profile`, a 1200x630 Open Graph card screenshotted from
+    `design-drafts/og-image/card.html`, and `public/llms.txt`. See "SEO & llms.txt" above.
+    - **Two defects were found by grepping the built HTML, not by reading the code:** page-level
+      `openGraph` replaced the layout's wholesale (so the content pages had no `og:image`), and
+      their `twitter:` tags carried the home page's copy. `pageMetadata` now always emits the
+      complete card. Both are written up as the gotcha above.
+    - Verified against `npm run build` + `npm start`: all four routes emit the right title,
+      description, canonical, robots and a complete OG/Twitter card; `/profile` is `noindex,
+      nofollow`; every `ld+json` block parses and carries the expected `@type`s; `/robots.txt`,
+      `/sitemap.xml` and `/llms.txt` all serve correctly. `tsc`/ESLint clean.
+    - **Then found and fixed two host problems:** the canonicals named the apex `sealedskin.com`,
+      which 308s to `www` (Vercel's primary domain), so every canonical resolved through a hop -
+      `SITE_URL` now defaults to `https://www.sealedskin.com`. And `sealedskin.vercel.app` was
+      serving the whole site as an indexable duplicate, now 308'd via `next.config.ts`. See
+      "Canonical host and the vercel.app duplicate" above.
+    - **Not done, and the real remaining lever:** the home page's server-rendered content is one
+      heading and one paragraph. Ranking beyond brand-name searches needs content, not metadata.
+
 ## Likely next steps
 
+- **The home page is thin for search.** See the note at the end of "SEO & llms.txt": the technical
+  layer is done, so the next lever is indexable content - a real landing section, or per-concern /
+  per-skin-type pages that can rank on their own.
+- **Submit the sitemap in Google Search Console** and verify the domain (DNS TXT at Cloudflare is
+  easiest; `GOOGLE_SITE_VERIFICATION` covers the meta-tag route). Nothing gets crawled promptly
+  until the property exists.
 - **Measure how the two voices actually sound.** Everything about the personas is verified
   structurally (prompt composition, UI, persistence); no test has read a real grounded reply in
   either voice. Worth repeated runs per persona - especially the dry voice against "never at the
