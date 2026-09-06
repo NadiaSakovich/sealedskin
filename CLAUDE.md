@@ -828,6 +828,22 @@ using it would 403. `sealedskin.com` is verified in Resend and the form sends fr
 `contact@sealedskin.com`, with the visitor's address as **`replyTo`** so a reply in Gmail goes to
 them rather than to the site.
 
+**Setup as it stands** (done once; recorded so it does not have to be rediscovered):
+
+- Resource `resend-email-claret-bell`, provisioned under the Vercel team, region `us-east-1`. There
+  is **no Resend password** - the Marketplace creates no separate credentials. Reach the dashboard
+  with `vercel integration open resend` (SSO from the Vercel login). It is deliberately **unclaimed**;
+  claiming would move it to a standalone Resend account with its own billing and login.
+- `sealedskin.com` is **verified**: DKIM `TXT resend._domainkey`, SPF `MX send` -> 
+  `feedback-smtp.us-east-1.amazonses.com` (priority 10), SPF `TXT send` -> `v=spf1
+  include:amazonses.com ~all`, all added at Cloudflare. Verification took about two minutes after
+  the records resolved. Note the SPF pair sits on the `send` subdomain, so it will not collide with
+  an apex SPF record if regular mail is ever set up on the domain.
+- Free tier: **3,000 emails a month, 100 a day**. A contact form will not approach that, and the
+  rate limit is the backstop if something goes wrong.
+- Verified end to end: a real message through `POST /api/contact` came back `contact.sent`, and
+  Resend's own event log reported `delivered` to the destination inbox.
+
 Without `RESEND_API_KEY` or `CONTACT_TO_EMAIL` the route returns **503** and says the form is
 unavailable, rather than failing silently - so local development and preview deploys need no setup.
 
