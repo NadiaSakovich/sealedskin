@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { ContentShell, CtaLink } from "@/components/layout/ContentShell";
 import { Arrow } from "@/components/ui/Arrow";
-import { PageBanner } from "@/components/ui/PageBanner";
 import { pageMetadata } from "@/lib/seo";
 
 const TITLE = "About";
 const DESCRIPTION =
-  "What SealedSkin is, why the routines are short, and what happens to your answers.";
+  "Who built SealedSkin and why - a short quiz that turns a shelf of confusing serums into a routine you can keep.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,
@@ -24,37 +23,41 @@ export default function AboutPage() {
     <ContentShell>
       <div className={eyebrow}>About</div>
       <h1 className="font-head font-semibold text-[32px] leading-[1.1] tracking-[-0.025em] text-ss-ink mb-[14px] max-w-[480px] [text-wrap:balance]">
-        Fewer products, chosen properly
+        Hi, I&rsquo;m Nadia
       </h1>
-      <p className="text-[16.5px] leading-[1.6] text-ss-ink-soft max-w-[560px] [text-wrap:pretty]">
-        Buying skincare is confusing. Eleven serums on one shelf, all promising the same thing, and
-        no way to tell which two you need. So SealedSkin asks seven questions about how your skin
-        behaves on a normal day, then hands back a morning and evening routine you can memorise.
-        Usually four steps. Sometimes three.
-      </p>
 
-      <div className="mt-9">
-        <PageBanner
-          src="/pages/about-cosmetics.jpg"
-          alt="Unlabelled skincare bottles on a stone ledge with a eucalyptus sprig"
+      <div className="flex items-start gap-4 sm:gap-5">
+        <Image
+          src="/about/nadia.jpg"
+          alt="Nadia, who built SealedSkin"
+          width={512}
+          height={512}
+          priority
+          className="shrink-0 w-[88px] h-[88px] sm:w-28 sm:h-28 rounded-full object-cover border border-ss-hairline ring-4 ring-ss-accent-tint"
         />
+        <p className="text-[16.5px] leading-[1.6] text-ss-ink-soft [text-wrap:pretty]">
+          I&rsquo;m an electrical engineer. Years ago, in an earlier career, I was a front-end web
+          developer. SealedSkin is a hobby project - a small thing built on the weekends, for anyone
+          who wants to take better care of their skin and has no idea where to start.
+        </p>
       </div>
 
-      <h2 className={sectionH}>Why the routine is short</h2>
+      <h2 className={sectionH}>Why I built it</h2>
       <p className={para}>
-        Consistency beats complexity. A twelve-step routine gets abandoned by Friday. A four-step
-        one survives a bad week, a holiday and a cold. So the routine here is short on purpose.
-        Cleanse. Treat the one thing that bothers you most. Moisturise. Wear sunscreen in the
-        morning. Everything past that is optional, and you can add it once the basics are a habit.
+        It started with my own face. I suddenly started getting acne and realized I needed to do
+        something about it. I had no real idea where to start - which ingredient does what, which of
+        the eleven serums on the shelf was meant for me, in what order any of it goes on. Eventually
+        I asked an AI to work it out. I followed what it gave me, and my skin soon got better. What
+        finally worked was simple. Finding this simple solution was the hard part, and it
+        shouldn&rsquo;t be.
       </p>
 
-      <h2 className={sectionH}>How we build your routine</h2>
+      <h2 className={sectionH}>What I wanted it to be</h2>
       <p className={para}>
-        Your answers set three things: your skin type, the two or three concerns you want dealt
-        with first, and how many steps you&rsquo;re willing to do. The routine gets built around
-        ingredients that suit all three. An AI writes the final version and looks up current
-        products and prices while it does, then it gets checked against a fixed set of safety rules
-        before it reaches you.
+        So I built a simple web service I wish I&rsquo;d had. No twenty-minute questionnaire - a
+        short quiz that asks only what is actually needed to pick the right ingredients and put them
+        in a sensible order. And because a routine always leaves you with questions, there is
+        someone here to answer them.
       </p>
 
       <h2 className={sectionH}>Meet Snuffy</h2>
@@ -82,19 +85,14 @@ export default function AboutPage() {
         />
       </div>
 
-      <h2 className={sectionH}>Your privacy</h2>
-      <p className={para}>
-        Your answers build your routine and go nowhere else. We don&rsquo;t sell them, and
-        there&rsquo;s no profile of your skin sitting anywhere for an advertiser to buy. Retake the
-        quiz as often as you like.
-      </p>
-
       <h2 className={sectionH}>A note on safety</h2>
       <p className={para}>
         The brands we show are examples of the right kind of product. Buy whichever version of it
-        you can find. Everything here is general guidance and no substitute for a dermatologist. If
-        you&rsquo;re pregnant or nursing we leave out the ingredients usually avoided then, but for
-        a diagnosed skin condition, or anything that worries you, please go and see one.
+        looks more appealing to you, and if that doesn&rsquo;t work, give another one a shot. If
+        you&rsquo;re pregnant or nursing we leave out the ingredients usually avoided in pregnancy.
+        Everything here is general guidance and no substitute for a dermatologist. For a diagnosed
+        skin condition, or anything looking like a serious problem, please go and see a
+        professional.
       </p>
 
       <div className="mt-10">
