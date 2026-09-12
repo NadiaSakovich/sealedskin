@@ -456,7 +456,7 @@ export default function SkinQuiz() {
               answers. Pick whatever sounds most like you.
             </p>
             <Button onClick={() => go(1)}>Start <Arrow /></Button>
-            <div className="mt-4 text-[13px] text-ss-ink-faint">About a minute</div>
+            <div className="mt-4 text-[13px] text-ss-ink-faint">Takes about a minute</div>
           </div>
         </Screen>
       </Shell>

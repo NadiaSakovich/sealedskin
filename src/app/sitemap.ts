@@ -16,7 +16,7 @@ import { absoluteUrl } from "@/lib/seo";
 const ROUTES: { path: string; lastModified: string; changeFrequency: "monthly" | "yearly"; priority: number }[] = [
   { path: "/", lastModified: "2026-08-22", changeFrequency: "monthly", priority: 1 },
   { path: "/how-it-works", lastModified: "2026-08-22", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/about", lastModified: "2026-08-30", changeFrequency: "monthly", priority: 0.6 },
+  { path: "/about", lastModified: "2026-09-12", changeFrequency: "monthly", priority: 0.6 },
   { path: "/contact", lastModified: "2026-09-06", changeFrequency: "yearly", priority: 0.5 },
 ];
 
